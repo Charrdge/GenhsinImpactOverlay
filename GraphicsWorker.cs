@@ -1,4 +1,5 @@
-﻿using GameOverlay.Drawing;
+﻿using GenshinImpactOverlay.GraphicWorkers;
+using GameOverlay.Drawing;
 using GameOverlay.Windows;
 using System.Windows.Forms;
 
@@ -12,12 +13,12 @@ internal class GraphicsWorker : IDisposable
 	/// <summary>
 	/// Словарь цветов
 	/// </summary>
-	public Dictionary<string, SolidBrush> Brushes { get; } = new();
+	public Dictionary<string, SolidBrushWorker> Brushes { get; } = new();
 	
 	/// <summary>
 	/// Словарь шрифтов
 	/// </summary>
-	public Dictionary<string, Font> Fonts { get; } = new();
+	public Dictionary<string, FontWorker> Fonts { get; } = new();
 
 	/// <summary>
 	/// Создаёт новый экземпляр обработчика графики
@@ -56,7 +57,32 @@ internal class GraphicsWorker : IDisposable
 
 	public event DrawGraphic? OnDrawGraphics;
 
+	#region Graphic resource adding methods
+	public void AddFont(string name, string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
+	{
+		bool removed = Fonts.Remove(name, out FontWorker? oldValue);
+		if (removed && oldValue is not null) oldValue.Dispose();
+
+		bool added = Fonts.TryAdd(name, new FontWorker(fontFamilyName, size, bold, italic, wordWrapping));
+		if (!added) throw new Exception("Fonts not added");
+	}
+
+	public void AddSolidBrush(string name, Color color)
+	{
+		bool removed = Brushes.Remove(name, out SolidBrushWorker oldValue);
+		if (removed && oldValue is not null) oldValue.Dispose();
+
+		bool added = Brushes.TryAdd(name, new SolidBrushWorker(color));
+		if (!added) throw new Exception("Solid Brush not added");
+	}
+	#endregion
+
 	#region Graphic event methods
+	/// <summary>
+	/// Метод установки графических настроек
+	/// </summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
 	private void Overlay_SetupGraphics(object? sender, SetupGraphicsEventArgs e)
 	{
 		var gfx = e.Graphics;
@@ -67,14 +93,17 @@ internal class GraphicsWorker : IDisposable
 			foreach (var pair in Fonts) pair.Value.Dispose();
 		}
 
-		Brushes["black"] = gfx.CreateSolidBrush(0, 0, 0);
-		Brushes["white"] = gfx.CreateSolidBrush(255, 255, 255);
-
-		Fonts["consolas"] = gfx.CreateFont("Consolas", 14);
+		foreach (var pair in Brushes) pair.Value.Create(gfx);
+		foreach (var pair in Fonts) pair.Value.Create(gfx);
 
 		if (e.RecreateResources) return;
 	}
 
+	/// <summary>
+	/// Метод отрисовки графики
+	/// </summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
 	private void Overlay_DrawGraphics(object? sender, DrawGraphicsEventArgs e)
 	{
 		var gfx = e.Graphics;
@@ -84,6 +113,11 @@ internal class GraphicsWorker : IDisposable
 		OnDrawGraphics?.Invoke(this, gfx);
 	}
 
+	/// <summary>
+	/// Метод отчистки графики
+	/// </summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
 	private void Overlay_DestroyGraphics(object? sender, DestroyGraphicsEventArgs e)
 	{
 		foreach (var pair in Brushes) pair.Value.Dispose();
