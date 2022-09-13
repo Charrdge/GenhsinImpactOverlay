@@ -16,10 +16,7 @@ internal class CooldownSystem : IDisposable
 
 	public TimeSpan? MaxCooldownTime { get; }
 
-	public CooldownSystem(GraphicsWorker graphics, TimeSpan? maxCooldownTime = null) 
-		: this(graphics, maxCooldownTime, new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 }) { }
-
-	public CooldownSystem(GraphicsWorker graphics, TimeSpan? maxCooldownTime, Keys[] switchChararcterKeys)
+	public CooldownSystem(GraphicsWorker graphics, Keys[] switchChararcterKeys, TimeSpan? maxCooldownTime = null)
 	{
 		LastSelectCharKey = switchChararcterKeys[0];
 
@@ -51,7 +48,12 @@ internal class CooldownSystem : IDisposable
 			{
 				var key = SelectKeys[i];
 
-				e.DrawTextWithBackground(graphics.Fonts["consolas"], graphics.Brushes["white"], graphics.Brushes["black"], v, h + (p * i), text(key));
+				e.DrawTextWithBackground(
+					graphics.Fonts["consolas"], // Шрифт текста
+					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["white"], // Цвет текста
+					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["black"], // Фон текста
+					v, h + (p * i), // Положение текста
+					text(key)); // Текст
 			}
 		};
 
