@@ -1,5 +1,8 @@
 ﻿using System.Windows.Forms;
 
+/// <summary>
+/// Система информирования отката навыков персонажа
+/// </summary>
 internal class CooldownSystem : IDisposable
 {
 	/// <summary>
@@ -7,20 +10,32 @@ internal class CooldownSystem : IDisposable
 	/// </summary>
 	private Dictionary<Keys, DateTime> LastClickTimes { get; set; } = new();
 
-	private Keys[] SelectKeys { get; set; }
+	/// <summary>
+	/// Кнопки для смены персонажей
+	/// </summary>
+	private Keys[] SwitchCharacterKeys { get; set; }
 
 	/// <summary>
 	/// Последняя нажатая клавиша переключения персонажа
 	/// </summary>
 	private Keys LastSelectCharKey { get; set; }
 
+	/// <summary>
+	/// Время, после которого таймер принудительно обнулится
+	/// </summary>
 	public TimeSpan? MaxCooldownTime { get; }
 
+	/// <summary>
+	/// Создаёт новый экземпляр системы контроля откатов
+	/// </summary>
+	/// <param name="graphics">Используемый обработчик графики</param>
+	/// <param name="switchChararcterKeys">Кнопки для смены персонажей</param>
+	/// <param name="maxCooldownTime">Время, после которого таймер принудительно обнулится</param>
 	public CooldownSystem(GraphicsWorker graphics, Keys[] switchChararcterKeys, TimeSpan? maxCooldownTime = null)
 	{
 		LastSelectCharKey = switchChararcterKeys[0];
 
-		SelectKeys = switchChararcterKeys;
+		SwitchCharacterKeys = switchChararcterKeys;
 		foreach (Keys key in switchChararcterKeys) LastClickTimes.Add(key, DateTime.Now);
 
 		ButtonHook.OnKeyDown += (vkCode) =>
@@ -33,27 +48,27 @@ internal class CooldownSystem : IDisposable
 
 		graphics.OnDrawGraphics += (sender, e) =>
 		{
-			var text = (Keys key) =>
+			Func<Keys, string> timerText = (Keys key) =>
 			{
 				TimeSpan span = DateTime.Now - LastClickTimes[key];
 				if (span >= MaxCooldownTime) return $"00:00:00";
 				return $"{span.Minutes}:{span.Seconds}:{span.Milliseconds / 10}";
 			};
 
-			int v = 1300; // расположение по горизонтали
-			int h = 225; // расположение по вертикали
+			int h = 1300; // расположение по горизонтали
+			int v = 225; // расположение по вертикали
 			int p = 55; // коэффициент смещения
 
-			for (int i = 0; i < SelectKeys.Length; i++)
+			for (int i = 0; i < SwitchCharacterKeys.Length; i++)
 			{
-				var key = SelectKeys[i];
+				var key = SwitchCharacterKeys[i];
 
 				e.DrawTextWithBackground(
 					graphics.Fonts["consolas"], // Шрифт текста
 					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["white"], // Цвет текста
 					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["black"], // Фон текста
-					v, h + (p * i), // Положение текста
-					text(key)); // Текст
+					h, v + (p * i), // Положение текста
+					timerText(key)); // Текст
 			}
 		};
 
