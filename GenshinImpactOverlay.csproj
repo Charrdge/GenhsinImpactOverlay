@@ -12,4 +12,8 @@
     <PackageReference Include="Simplify.Windows.Forms" Version="1.1.2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="EventArgs\" />
+  </ItemGroup>
+
 </Project>
