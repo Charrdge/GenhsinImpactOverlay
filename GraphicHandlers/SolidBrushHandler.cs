@@ -2,18 +2,18 @@
 
 namespace GenshinImpactOverlay.GraphicWorkers
 {
-	public class SolidBrushWorker
+	public class SolidBrushHandler
 	{
 		public Color Color { get; }
 
 		private SolidBrush? Brush { get; set; }
 
-		public SolidBrushWorker(Color color) => Color = color;
+		public SolidBrushHandler(Color color) => Color = color;
 
 		public void Create(Graphics gfx) => Brush = gfx.CreateSolidBrush(Color);
 
 		public void Dispose() => Brush?.Dispose();
 
-		public static implicit operator SolidBrush(SolidBrushWorker worker) => worker.Brush ?? throw new NullReferenceException($"{nameof(Brush)} not initialized");
+		public static implicit operator SolidBrush(SolidBrushHandler worker) => worker.Brush ?? throw new NullReferenceException($"{nameof(Brush)} not initialized");
 	}
 }

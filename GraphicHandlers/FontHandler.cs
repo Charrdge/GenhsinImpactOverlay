@@ -2,7 +2,7 @@
 
 namespace GenshinImpactOverlay.GraphicWorkers
 {
-	public class FontWorker
+	public class FontHandler
 	{
 		public string FontFamilyName { get; }
 
@@ -16,7 +16,7 @@ namespace GenshinImpactOverlay.GraphicWorkers
 
 		private Font? Font { get; set; }
 
-		public FontWorker(string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
+		public FontHandler(string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
 		{
 			FontFamilyName = fontFamilyName;
 			Size = size;
@@ -29,6 +29,6 @@ namespace GenshinImpactOverlay.GraphicWorkers
 
 		public void Dispose() => Font?.Dispose();
 
-		public static implicit operator Font(FontWorker fontWorker) => fontWorker.Font ?? throw new NullReferenceException($"{nameof(Font)} not initialized");
+		public static implicit operator Font(FontHandler fontWorker) => fontWorker.Font ?? throw new NullReferenceException($"{nameof(Font)} not initialized");
 	}
 }
