@@ -5,7 +5,7 @@ internal class CooldownSystem : IDisposable
 	/// <summary>
 	/// Хранит время с последнего нажатия навыка каждого персонажа
 	/// </summary>
-	private Dictionary<Keys, DateTime> LastClickTimes = new();
+	private Dictionary<Keys, DateTime> LastClickTimes { get; set; } = new();
 
 	private Keys[] SelectKeys { get; set; }
 
