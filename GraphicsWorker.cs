@@ -1,7 +1,6 @@
 ﻿using GenshinImpactOverlay.GraphicWorkers;
 using GameOverlay.Drawing;
 using GameOverlay.Windows;
-using System.Windows.Forms;
 
 internal class GraphicsWorker : IDisposable
 {
@@ -13,12 +12,12 @@ internal class GraphicsWorker : IDisposable
 	/// <summary>
 	/// Словарь цветов
 	/// </summary>
-	public Dictionary<string, SolidBrushWorker> Brushes { get; } = new();
+	public Dictionary<string, SolidBrushHandler> Brushes { get; } = new();
 	
 	/// <summary>
 	/// Словарь шрифтов
 	/// </summary>
-	public Dictionary<string, FontWorker> Fonts { get; } = new();
+	public Dictionary<string, FontHandler> Fonts { get; } = new();
 
 	/// <summary>
 	/// Создаёт новый экземпляр обработчика графики
@@ -60,19 +59,19 @@ internal class GraphicsWorker : IDisposable
 	#region Graphic resource adding methods
 	public void AddFont(string name, string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
 	{
-		bool removed = Fonts.Remove(name, out FontWorker? oldValue);
+		bool removed = Fonts.Remove(name, out FontHandler? oldValue);
 		if (removed && oldValue is not null) oldValue.Dispose();
 
-		bool added = Fonts.TryAdd(name, new FontWorker(fontFamilyName, size, bold, italic, wordWrapping));
+		bool added = Fonts.TryAdd(name, new FontHandler(fontFamilyName, size, bold, italic, wordWrapping));
 		if (!added) throw new Exception("Fonts not added");
 	}
 
 	public void AddSolidBrush(string name, Color color)
 	{
-		bool removed = Brushes.Remove(name, out SolidBrushWorker oldValue);
+		bool removed = Brushes.Remove(name, out SolidBrushHandler oldValue);
 		if (removed && oldValue is not null) oldValue.Dispose();
 
-		bool added = Brushes.TryAdd(name, new SolidBrushWorker(color));
+		bool added = Brushes.TryAdd(name, new SolidBrushHandler(color));
 		if (!added) throw new Exception("Solid Brush not added");
 	}
 	#endregion
