@@ -2,6 +2,9 @@
 using GameOverlay.Drawing;
 using GameOverlay.Windows;
 
+/// <summary>
+/// Обработчик отображаемой графики
+/// </summary>
 internal class GraphicsWorker : IDisposable
 {
 	/// <summary>
@@ -46,6 +49,9 @@ internal class GraphicsWorker : IDisposable
 
 	~GraphicsWorker() => Dispose(false);
 
+	/// <summary>
+	/// Запускает отображение и обработку графики
+	/// </summary>
 	public void Run()
 	{
 		Overlay.Create();
@@ -57,22 +63,57 @@ internal class GraphicsWorker : IDisposable
 	public event DrawGraphic? OnDrawGraphics;
 
 	#region Graphic resource adding methods
-	public void AddFont(string name, string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
+	/// <summary>
+	/// Добавляет новый шрифт в коллекцию шрифтов
+	/// </summary>
+	/// <param name="fontFamilyName">Семейство шрифтов</param>
+	/// <param name="size">Размер шрифта</param>
+	/// <param name="bold"></param>
+	/// <param name="italic"></param>
+	/// <param name="wordWrapping"></param>
+	/// <returns>Имя шрифта</returns>
+	/// <exception cref="ArgumentException"></exception>
+	public string AddFont(string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
 	{
+		string name = GenerateName(fontFamilyName, size, bold, italic, wordWrapping);
+
 		bool removed = Fonts.Remove(name, out FontHandler? oldValue);
 		if (removed && oldValue is not null) oldValue.Dispose();
 
 		bool added = Fonts.TryAdd(name, new FontHandler(fontFamilyName, size, bold, italic, wordWrapping));
-		if (!added) throw new Exception("Fonts not added");
+		if (!added) throw new ArgumentException("Fonts not added");
+
+		return name;
+
+		static string GenerateName(string fontFamilyName, float size, bool bold, bool italic, bool wordWrapping)
+		{
+			string name = $"{fontFamilyName}{size}";
+			if (bold) name += $"{bold}";
+			if (italic) name += $"{italic}";
+			if (wordWrapping) name += $"{wordWrapping}";
+			return name;
+		}
 	}
 
-	public void AddSolidBrush(string name, Color color)
+	/// <summary>
+	/// Добавляет новый цвет в коллекцию цветов
+	/// </summary>
+	/// <param name="name"></param>
+	/// <param name="color"></param>
+	/// <exception cref="ArgumentException">Возникает в случае неудачи при попытке добавить цвет в коллекцию</exception>
+	public string AddSolidBrush(Color color)
 	{
-		bool removed = Brushes.Remove(name, out SolidBrushHandler oldValue);
+		string name = GenerateName(color);
+
+		bool removed = Brushes.Remove(name, out SolidBrushHandler? oldValue);
 		if (removed && oldValue is not null) oldValue.Dispose();
 
 		bool added = Brushes.TryAdd(name, new SolidBrushHandler(color));
-		if (!added) throw new Exception("Solid Brush not added");
+		if (!added) throw new ArgumentException("Solid Brush not added", nameof(color));
+
+		return name;
+
+		static string GenerateName(Color color) => $"{color.A}:{color.R}:{color.G}:{color.B}";
 	}
 	#endregion
 
