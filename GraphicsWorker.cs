@@ -23,6 +23,20 @@ internal class GraphicsWorker : IDisposable
 	/// </summary>
 	public Dictionary<string, FontHandler> Fonts { get; } = new();
 
+	#region OnDrawGraphic event
+	/// <summary>
+	/// Делегат для события отрисовки графикк
+	/// </summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
+	public delegate void DrawGraphic(object? sender, OnDrawGraphicEventArgs e);
+
+	/// <summary>
+	/// Событие отрисовки графики
+	/// </summary>
+	public event DrawGraphic? OnDrawGraphics;
+	#endregion OnDrawGraphic event
+
 	/// <summary>
 	/// Создаёт новый экземпляр обработчика графики
 	/// </summary>
@@ -58,18 +72,6 @@ internal class GraphicsWorker : IDisposable
 		Overlay.Create();
 		Overlay.Join();
 	}
-
-	/// <summary>
-	/// Делегат для события отрисовки графикк
-	/// </summary>
-	/// <param name="sender"></param>
-	/// <param name="e"></param>
-	public delegate void DrawGraphic(object? sender, OnDrawGraphicEventArgs e);
-
-	/// <summary>
-	/// Событие отрисовки графики
-	/// </summary>
-	public event DrawGraphic? OnDrawGraphics;
 
 	#region Graphic resource adding methods
 	/// <summary>
