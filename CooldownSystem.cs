@@ -38,6 +38,11 @@ internal class CooldownSystem : IDisposable
 		SwitchCharacterKeys = switchChararcterKeys;
 		foreach (Keys key in switchChararcterKeys) LastClickTimes.Add(key, DateTime.Now);
 
+		string font = graphics.AddFont("Consolas", 14);
+
+		string white = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
+		string black = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
+
 		ButtonHook.OnKeyDown += (vkCode) =>
 		{
 			var key = (Keys)vkCode;
@@ -64,9 +69,9 @@ internal class CooldownSystem : IDisposable
 				var key = SwitchCharacterKeys[i];
 
 				e.Graphics.DrawTextWithBackground(
-					graphics.Fonts["consolas"], // Шрифт текста
-					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["white"], // Цвет текста
-					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["black"], // Фон текста
+					graphics.Fonts[font], // Шрифт текста
+					(GameOverlay.Drawing.SolidBrush)graphics.Brushes[white], // Цвет текста
+					(GameOverlay.Drawing.SolidBrush)graphics.Brushes[black], // Фон текста
 					h, v + (p * i), // Положение текста
 					timerText(key)); // Текст
 			}

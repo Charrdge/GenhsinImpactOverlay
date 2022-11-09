@@ -17,11 +17,10 @@ hook.Start();
 
 using (GraphicsWorker graphicsWorker = new(handle))
 {
-	graphicsWorker.AddFont("consolas", "Consolas", 14);
+	var keys = new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 };
+	var cooldownSystem = new CooldownSystem(graphicsWorker, keys, new TimeSpan(0, 1, 30));
 
-	graphicsWorker.AddSolidBrush("black", new GameOverlay.Drawing.Color(0, 0, 0));
-	graphicsWorker.AddSolidBrush("white", new GameOverlay.Drawing.Color(255, 255, 255));
 
-	var cooldownSystem = new CooldownSystem(graphicsWorker, new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 }, new TimeSpan(0, 1, 30));
+
 	graphicsWorker.Run();
 }
