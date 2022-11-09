@@ -1,6 +1,7 @@
 ﻿using GenshinImpactOverlay.GraphicWorkers;
 using GameOverlay.Drawing;
 using GameOverlay.Windows;
+using GenshinImpactOverlay.EventsArgs;
 
 /// <summary>
 /// Обработчик отображаемой графики
@@ -58,8 +59,16 @@ internal class GraphicsWorker : IDisposable
 		Overlay.Join();
 	}
 
-	public delegate void DrawGraphic(object? sender, Graphics graphics);
+	/// <summary>
+	/// Делегат для события отрисовки графикк
+	/// </summary>
+	/// <param name="sender"></param>
+	/// <param name="e"></param>
+	public delegate void DrawGraphic(object? sender, OnDrawGraphicEventArgs e);
 
+	/// <summary>
+	/// Событие отрисовки графики
+	/// </summary>
 	public event DrawGraphic? OnDrawGraphics;
 
 	#region Graphic resource adding methods
@@ -150,7 +159,7 @@ internal class GraphicsWorker : IDisposable
 
 		gfx.ClearScene();
 
-		OnDrawGraphics?.Invoke(this, gfx);
+		OnDrawGraphics?.Invoke(this, new OnDrawGraphicEventArgs(gfx));
 	}
 
 	/// <summary>
