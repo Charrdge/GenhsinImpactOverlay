@@ -63,7 +63,7 @@ internal class CooldownSystem : IDisposable
 			{
 				var key = SwitchCharacterKeys[i];
 
-				e.DrawTextWithBackground(
+				e.Graphics.DrawTextWithBackground(
 					graphics.Fonts["consolas"], // Шрифт текста
 					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["white"], // Цвет текста
 					(GameOverlay.Drawing.SolidBrush)graphics.Brushes["black"], // Фон текста
