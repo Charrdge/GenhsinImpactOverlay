@@ -16,8 +16,16 @@ Task hook = new(ButtonHook.Run);
 hook.Start();
 #endregion
 
+while (System.Diagnostics.Process.GetProcessesByName(name).Length == 0)
+{
+	Console.WriteLine($"Waiting for running {name}");
+	Thread.Sleep(5000);
+}
+
 IntPtr handleWindow = System.Diagnostics.Process.GetProcessesByName(name).First().MainWindowHandle;
 IntPtr overlayWindow = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
+
+Console.WriteLine($"Get process {name} successfuly");
 
 #region Foreground switching
 [DllImport("user32.dll")]
