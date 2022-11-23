@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Text;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Timers;
+﻿using System.Text.Json;
 
 namespace GenshinImpactOverlay.ImageBoard;
 
@@ -12,7 +7,7 @@ namespace GenshinImpactOverlay.ImageBoard;
 /// </summary>
 internal class ImageBoardSystem : IDisposable
 {
-	private SortedDictionary<long, Post> Posts { get; init; } = new();
+	private SortedDictionary<int, Post> Posts { get; set; } = new();
 
 	private GraphicsWorker Worker { get; init; }
 
@@ -36,8 +31,6 @@ internal class ImageBoardSystem : IDisposable
 
 		JsonDocument thread = GetThread(httpClient);
 
-		Console.WriteLine(thread.ToString());
-
 		GetAllPosts(httpClient, thread);
 
 		System.Timers.Timer timer = new(5000);
@@ -46,9 +39,32 @@ internal class ImageBoardSystem : IDisposable
 		{
 			long threadNum = Posts.First().Key;
 
-			long postNum = Posts.Last().Key;
+			string requestString = $"https://2ch.hk/api/mobile/v2/info/vg/{threadNum}";
+			
+			using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
+			{
+				var response = httpClient.Send(postsRequest);
+				string strJson = response.Content.ReadAsStringAsync().Result;
 
-			string requestString = $"https://2ch.hk/api/mobile/v2/after/vg/{threadNum}/{postNum}";
+				using (JsonDocument document = JsonDocument.Parse(strJson))
+				{
+					JsonElement root = document.RootElement;
+					JsonElement posts = root.GetProperty("thread").GetProperty("posts");
+
+					if (posts.TryGetInt32(out int postCount) && postCount > 999)
+					{
+						JsonDocument thread = GetThread(httpClient);
+
+						int num = thread.RootElement.GetProperty("num").GetInt32();
+
+						if (!Posts.ContainsKey(num)) GetAllPosts(httpClient, thread);
+					}
+				}
+			}
+
+			int postNum = Posts.Last().Key;
+
+			requestString = $"https://2ch.hk/api/mobile/v2/after/vg/{threadNum}/{postNum}";
 
 			using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
 			{
@@ -57,6 +73,7 @@ internal class ImageBoardSystem : IDisposable
 
 				using (JsonDocument document = JsonDocument.Parse(strJson))
 				{
+
 					JsonElement root = document.RootElement;
 					JsonElement posts = root.GetProperty("posts");
 					foreach (JsonElement json in posts.EnumerateArray())
@@ -83,12 +100,12 @@ internal class ImageBoardSystem : IDisposable
 		int left = 80;
 		int upper = 0;
 
-		IEnumerable<KeyValuePair<long, Post>> LastPosts = Posts.TakeLast(4);
+		if (Posts.Count == 0) return;
+
+		IEnumerable<KeyValuePair<int, Post>> LastPosts = Posts.TakeLast(4);
 		//IEnumerable<KeyValuePair<long, Post>> LastPosts = Posts.Take(6);
 
-		HttpClient client = new();
-
-		foreach (KeyValuePair<long, Post> pair in LastPosts.Reverse())
+		foreach (KeyValuePair<int, Post> pair in LastPosts.Reverse())
 		{
 			Post post = pair.Value;
 
@@ -124,9 +141,9 @@ internal class ImageBoardSystem : IDisposable
 
 	}
 
-	private Dictionary<long, JsonDocument> GetAllPosts(HttpClient httpClient, JsonDocument thread)
+	private void GetAllPosts(HttpClient httpClient, JsonDocument thread)
 	{
-		Dictionary<long, JsonDocument> dict = new();
+		Posts = new SortedDictionary<int, Post>();
 
 		long threadNum = thread.RootElement.GetProperty("num").GetInt64();
 
@@ -153,8 +170,6 @@ internal class ImageBoardSystem : IDisposable
 				}
 			}
 		}
-
-		return dict;
 	}
 
 	~ImageBoardSystem() => Dispose(disposing: false);
