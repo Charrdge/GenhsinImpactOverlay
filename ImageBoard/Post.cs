@@ -122,7 +122,7 @@ internal class Post
 				text); // Текст
 			#endregion Text
 
-			graphics.DrawLine((SolidBrush)worker.Brushes[WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - postHeight), 2f);
+			graphics.DrawLine((SolidBrush)worker.Brushes[WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - imgHeight), 2f);
 		}
 		else
 		{

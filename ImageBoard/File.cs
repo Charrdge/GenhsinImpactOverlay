@@ -1,7 +1,5 @@
 ﻿using System.Text.Json.Serialization;
 
-using Microsoft.VisualBasic.ApplicationServices;
-
 namespace GenshinImpactOverlay.ImageBoard;
 
 public class File
