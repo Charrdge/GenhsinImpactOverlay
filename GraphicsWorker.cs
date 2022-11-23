@@ -1,6 +1,6 @@
-﻿using GenshinImpactOverlay.GraphicWorkers;
-using GameOverlay.Drawing;
+﻿using GameOverlay.Drawing;
 using GameOverlay.Windows;
+using GenshinImpactOverlay.GraphicWorkers;
 using GenshinImpactOverlay.EventsArgs;
 
 /// <summary>
