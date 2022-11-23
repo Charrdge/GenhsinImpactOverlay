@@ -297,24 +297,29 @@ internal class ImageBoardSystem : IDisposable
 	private static bool Cut(string inputString, int maxRows, out string cuttedString, out int length)
 	{
 		string str = "";
-		bool cutted = true;
+		length = 0;
+		bool cutted = false;
 
-		int rowCount = 1;
-		foreach (var item in inputString.Split('\n'))
+		string[] rows = inputString.Split('\n');
+
+		for (int index = 0; index < rows.Length; index++)
 		{
-			if (cutted == false)
+			length = index;
+
+			string row = rows[index];
+
+			if (index <= maxRows - 1)
 			{
-				if (item?.Length > 0) cutted = true;
+				str += $"{row}\n";
+			}
+			else
+			{
+				cutted = true;
 				break;
 			}
-			str += $"{item}\n";
-			rowCount++;
-
-			if (rowCount == maxRows) cutted = false;
 		}
 
 		cuttedString = str;
-		length = rowCount;
 
 		return cutted;
 	}
