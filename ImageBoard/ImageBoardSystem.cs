@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net.Http;
+using System.Text.Json;
 
 namespace GenshinImpactOverlay.ImageBoard;
 
@@ -8,24 +9,18 @@ namespace GenshinImpactOverlay.ImageBoard;
 internal class ImageBoardSystem : IDisposable
 {
 	private SortedDictionary<int, Post> Posts { get; set; } = new();
-
 	private GraphicsWorker Worker { get; init; }
+	private System.Timers.Timer GetNewPostsTimer = new(5000);
 
-	private string FontIndex { get; init; }
-	private string WhiteBrushIndex { get; init; }
-	private string BlackBrushIndex { get; init; }
-
-	public ImageBoardSystem(GraphicsWorker graphics)
+	public ImageBoardSystem(GraphicsWorker worker)
 	{
-		Worker = graphics;
+		Worker = worker;
 
-		FontIndex = graphics.AddFont("Consolas", 14);
-		Post.FontIndex = FontIndex;
+		Post.FontIndex = worker.AddFont("Consolas", 14);
+		Post.BFontIndex = worker.AddFont("Consolas", 14, bold: true);
 
-		WhiteBrushIndex = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
-		Post.WhiteBrushIndex = WhiteBrushIndex;
-		BlackBrushIndex = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
-		Post.BlackBrushIndex = BlackBrushIndex;
+		Post.WhiteBrushIndex = worker.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
+		Post.BlackBrushIndex = worker.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
 
 		HttpClient httpClient = new();
 
@@ -33,62 +28,10 @@ internal class ImageBoardSystem : IDisposable
 
 		GetAllPosts(httpClient, thread);
 
-		System.Timers.Timer timer = new(5000);
-
-		timer.Elapsed += (sender, e) =>
-		{
-			long threadNum = Posts.First().Key;
-
-			string requestString = $"https://2ch.hk/api/mobile/v2/info/vg/{threadNum}";
-			
-			using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
-			{
-				var response = httpClient.Send(postsRequest);
-				string strJson = response.Content.ReadAsStringAsync().Result;
-
-				using (JsonDocument document = JsonDocument.Parse(strJson))
-				{
-					JsonElement root = document.RootElement;
-					JsonElement posts = root.GetProperty("thread").GetProperty("posts");
-
-					if (posts.TryGetInt32(out int postCount) && postCount > 999)
-					{
-						JsonDocument thread = GetThread(httpClient);
-
-						int num = thread.RootElement.GetProperty("num").GetInt32();
-
-						if (!Posts.ContainsKey(num)) GetAllPosts(httpClient, thread);
-					}
-				}
-			}
-
-			int postNum = Posts.Last().Key;
-
-			requestString = $"https://2ch.hk/api/mobile/v2/after/vg/{threadNum}/{postNum}";
-
-			using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
-			{
-				var response = httpClient.Send(postsRequest);
-				string strJson = response.Content.ReadAsStringAsync().Result;
-
-				using (JsonDocument document = JsonDocument.Parse(strJson))
-				{
-
-					JsonElement root = document.RootElement;
-					JsonElement posts = root.GetProperty("posts");
-					foreach (JsonElement json in posts.EnumerateArray())
-					{
-						Post? post = JsonSerializer.Deserialize<Post>(JsonDocument.Parse(json.ToString()));
-
-						if (post is null) throw new Exception();
-
-						Posts.TryAdd(post.Num, post);
-					}
-				}
-			}
-		};
-		timer.AutoReset = true;
-		timer.Enabled = true;
+		//GetNewPostsTimer = new(5000);
+		GetNewPostsTimer.Elapsed += GetNewPosts;
+		GetNewPostsTimer.AutoReset = true;
+		GetNewPostsTimer.Enabled = true;
 
 		Worker.OnDrawGraphics += Graphics_OnDrawGraphics;
 	}
@@ -112,6 +55,59 @@ internal class ImageBoardSystem : IDisposable
 			upper += post.DrawPost(e.Graphics, Worker, bottom - upper, left);
 
 			upper += escape; //небольшой отступ между постами
+		}
+	}
+	
+	private void GetNewPosts(object? sender, System.Timers.ElapsedEventArgs e)
+	{
+		HttpClient httpClient = new();
+		long threadNum = Posts.First().Key;
+		string requestString = $"https://2ch.hk/api/mobile/v2/info/vg/{threadNum}";
+
+		using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
+		{
+			var response = httpClient.Send(postsRequest);
+			string strJson = response.Content.ReadAsStringAsync().Result;
+
+			using (JsonDocument document = JsonDocument.Parse(strJson))
+			{
+				JsonElement root = document.RootElement;
+				JsonElement posts = root.GetProperty("thread").GetProperty("posts");
+
+				if (posts.TryGetInt32(out int postCount) && postCount > 999)
+				{
+					JsonDocument thread = GetThread(httpClient);
+
+					int num = thread.RootElement.GetProperty("num").GetInt32();
+
+					if (!Posts.ContainsKey(num)) GetAllPosts(httpClient, thread);
+				}
+			}
+		}
+
+		int postNum = Posts.Last().Key;
+
+		requestString = $"https://2ch.hk/api/mobile/v2/after/vg/{threadNum}/{postNum}";
+
+		using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
+		{
+			var response = httpClient.Send(postsRequest);
+			string strJson = response.Content.ReadAsStringAsync().Result;
+
+			using (JsonDocument document = JsonDocument.Parse(strJson))
+			{
+
+				JsonElement root = document.RootElement;
+				JsonElement posts = root.GetProperty("posts");
+				foreach (JsonElement json in posts.EnumerateArray())
+				{
+					Post? post = JsonSerializer.Deserialize<Post>(JsonDocument.Parse(json.ToString()));
+
+					if (post is null) throw new Exception();
+
+					Posts.TryAdd(post.Num, post);
+				}
+			}
 		}
 	}
 
