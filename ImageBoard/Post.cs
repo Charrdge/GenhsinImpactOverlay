@@ -8,6 +8,7 @@ namespace GenshinImpactOverlay.ImageBoard;
 internal class Post
 {
 	public static string FontIndex { get; set; }
+	public static string BFontIndex { get; set; }
 	public static string WhiteBrushIndex { get; set; }
 	public static string BlackBrushIndex { get; set; }
 
@@ -86,6 +87,7 @@ internal class Post
 	[JsonPropertyName("dislikes")] public int? Dislikes { get; set; }
 	#endregion Optional
 
+
 	public int DrawPost(Graphics graphics, GraphicsWorker worker, int bottom, int left)
 	{
 		int row = 17;
@@ -107,7 +109,11 @@ internal class Post
 			string text = CleanedComment;
 			postHeight = imgHeight > (row * noImageRows) ? imgHeight : (row * noImageRows);
 
-			if (EditString(ref text, (postWidth - (imgWidth + 10)) / symb, postHeight / (row - 1), out int _))
+			bool cutted = EditString(ref text, (postWidth - (imgWidth + 10)) / symb, postHeight / (row - 1), out int textRows);
+
+			postHeight = imgHeight > (row * textRows) ? imgHeight : (row * noImageRows);
+
+			if (cutted)
 			{
 				text += "Развернуть...";
 				postHeight += row;
@@ -121,8 +127,6 @@ internal class Post
 				point, // Положение текста
 				text); // Текст
 			#endregion Text
-
-			graphics.DrawLine((SolidBrush)worker.Brushes[WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - imgHeight), 2f);
 		}
 		else
 		{
@@ -166,8 +170,17 @@ internal class Post
 			}
 			#endregion Files
 
-			graphics.DrawLine((SolidBrush)worker.Brushes[WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - postHeight), 2f);
 		}
+
+		graphics.DrawText(
+			worker.Fonts[BFontIndex], // Шрифт текста
+			(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+			new(left, bottom - postHeight - row), // Положение текста
+			$"№{Num}"); // Текст
+
+		postHeight += row;
+
+		graphics.DrawLine((SolidBrush)worker.Brushes[WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - postHeight), 2f);
 
 		return postHeight;
 	}
