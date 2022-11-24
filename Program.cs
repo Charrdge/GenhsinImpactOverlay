@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 #region Hello
 #if DEBUG
@@ -16,14 +17,17 @@ Task hook = new(ButtonHook.Run);
 hook.Start();
 #endregion
 
-while (System.Diagnostics.Process.GetProcessesByName(name).Length == 0)
+[DllImport("user32.dll")]
+static extern bool IsWindow(IntPtr hWnd);
+
+while (Process.GetProcessesByName(name).Length == 0 || !IsWindow(Process.GetProcessesByName(name).First().MainWindowHandle))
 {
 	Console.WriteLine($"Waiting for running {name}");
 	Thread.Sleep(5000);
 }
 
-IntPtr handleWindow = System.Diagnostics.Process.GetProcessesByName(name).First().MainWindowHandle;
-IntPtr overlayWindow = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
+IntPtr handleWindow = Process.GetProcessesByName(name).First().MainWindowHandle;
+IntPtr overlayWindow = Process.GetCurrentProcess().MainWindowHandle;
 
 Console.WriteLine($"Get process {name} successfuly");
 
