@@ -2,6 +2,7 @@
 using GameOverlay.Windows;
 using GenshinImpactOverlay.GraphicWorkers;
 using GenshinImpactOverlay.EventsArgs;
+using System.Windows.Forms;
 
 /// <summary>
 /// Обработчик отображаемой графики
@@ -37,6 +38,8 @@ internal class GraphicsWorker : IDisposable
 	public event DrawGraphic? OnDrawGraphics;
 	#endregion OnDrawGraphic event
 
+	public bool IsHidden { get; private set; } = false;
+
 	/// <summary>
 	/// Создаёт новый экземпляр обработчика графики
 	/// </summary>
@@ -60,6 +63,11 @@ internal class GraphicsWorker : IDisposable
 		Overlay.SetupGraphics += Overlay_SetupGraphics;
 		Overlay.DrawGraphics += Overlay_DrawGraphics;
 		Overlay.DestroyGraphics += Overlay_DestroyGraphics;
+
+		ButtonHook.OnKeyDown += (int vkCode) =>
+		{
+			if (((Keys)vkCode) == Keys.NumPad1) IsHidden = !IsHidden;
+		};
 	}
 
 	~GraphicsWorker() => Dispose(false);
@@ -161,7 +169,7 @@ internal class GraphicsWorker : IDisposable
 
 		gfx.ClearScene();
 
-		OnDrawGraphics?.Invoke(this, new OnDrawGraphicEventArgs(gfx));
+		if (!IsHidden) OnDrawGraphics?.Invoke(this, new OnDrawGraphicEventArgs(gfx));
 	}
 
 	/// <summary>
