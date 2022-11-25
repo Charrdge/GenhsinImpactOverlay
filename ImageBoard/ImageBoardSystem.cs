@@ -10,7 +10,7 @@ internal class ImageBoardSystem : IDisposable
 {
 	private SortedDictionary<int, Post> Posts { get; set; } = new();
 	private GraphicsWorker Worker { get; init; }
-	private System.Timers.Timer GetNewPostsTimer = new(5000);
+	private System.Timers.Timer GetNewPostsTimer { get; set; } = new(5000);
 
 	public ImageBoardSystem(GraphicsWorker worker)
 	{
