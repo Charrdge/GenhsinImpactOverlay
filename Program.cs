@@ -50,19 +50,22 @@ ButtonHook.OnKeyDown += (int vkCode) =>
 	{
 		bool foregroundWindowHasSet = SetForegroundWindow(overlayWindow);
 #if DEBUG
-		Console.WriteLine($"Set foreground window - {foregroundWindowHasSet}");
+		//Console.WriteLine($"Set foreground window - {foregroundWindowHasSet}");
 #endif
 	}
 };
 #endregion
 
+
 GameOverlay.TimerService.EnableHighPrecisionTimers();
 using (GraphicsWorker graphicsWorker = new(handleWindow))
 {
 	var keys = new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 };
-	//var cooldownSystem = new GenshinImpactOverlay.Cooldowns.CooldownSystem(graphicsWorker, keys, new TimeSpan(0, 1, 30));
-
-	var chanSystem = new GenshinImpactOverlay.ImageBoard.ImageBoardSystem(graphicsWorker);
+	//GenshinImpactOverlay.Cooldowns.CooldownSystem cooldownSystem = new(graphicsWorker, keys, new TimeSpan(0, 1, 30));
+	
+	GenshinImpactOverlay.Music.MusicSystem system = new(graphicsWorker);
+	
+	GenshinImpactOverlay.ImageBoard.ImageBoardSystem chanSystem = new(graphicsWorker);
 
 	graphicsWorker.Run();
 }
