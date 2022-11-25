@@ -55,7 +55,7 @@ internal class MusicSystem
 	{
 		var key = (Keys)vkCode;
 
-		if (key == Keys.Right) PlayNextStationTrack();
+		if (key == Keys.NumPad6) PlayNextStationTrack();
 	}
 
 	private void PlayNextStationTrack()
@@ -74,12 +74,15 @@ internal class MusicSystem
 
 		if (Player is not null)
 		{
-			Player.Stop();
-			Player.Dispose();
+			Player.Pause();
 		}
 
 		Player = new();
-		Player.PlaybackStopped += (sender, e) => PlayNextStationTrack();
+		Player.PlaybackStopped += (sender, e) =>
+		{
+			if (sender is not null) ((WasapiOut)sender).Pause();
+			PlayNextStationTrack();
+		};
 		Player.Init(Mf);
 		Player.Play();
 	}
