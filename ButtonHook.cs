@@ -32,6 +32,8 @@ internal static class ButtonHook
     public delegate void KeyDownDelegate(int vkCode);
     public static event KeyDownDelegate? OnKeyDown;
 
+    public static bool IsLockedInput { get; private set; } = true;
+
 	public static void Run()
 	{
         _hookID = SetHook(_proc);
@@ -51,13 +53,17 @@ internal static class ButtonHook
     private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         int vkCode = Marshal.ReadInt32(lParam);
-        OnKeyDown?.Invoke(vkCode);
 
-        if (nCode >= 0/* && wParam == (IntPtr)WM_KEYDOWN*/)
+		if (nCode == 0 && wParam == (IntPtr)257)
         {
-            //int vkCode = Marshal.ReadInt32(lParam);
-            //OnKeyDown?.Invoke(vkCode);
+            if (((Keys)vkCode) == Keys.NumPad5)
+			{
+                IsLockedInput = !IsLockedInput;
+                Console.WriteLine($"Locked is {IsLockedInput}");
+            }
+            if (!IsLockedInput) OnKeyDown?.Invoke(vkCode);
         }
+
         return CallNextHookEx(_hookID, nCode, wParam, lParam);
     }
 }
