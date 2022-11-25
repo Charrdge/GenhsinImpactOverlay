@@ -10,23 +10,32 @@ internal class MusicSystem
 {
 	private GraphicsWorker Worker { get; init; }
 
+	#region Player fields
 	private WasapiOut? Player { get; set; }
 	private MediaFoundationReader? Mf { get; set; }
-	private string? SoundName { get; set; }
+	#endregion Player fields
 
+	private string? SoundName { get; set; }
+	private string? PlayTrackId { get; set; }
+
+	#region Resources
 	private string FontIndex { get; init; }
 	private string WhiteBrushIndex { get; init; }
 	private string BlackBrushIndex { get; init; }
+	#endregion Resources
 
-	//private Task? Playertask { get; set; }
+	#region Station data
+	private string StationId { get; set; } = "user:onyourwave";
+	private Dictionary<string, JToken> StationTracks { get; } = new(20);
+	#endregion Station data
 
 	public MusicSystem(GraphicsWorker worker)
 	{
 		Worker = worker;
 		
 		FontIndex = worker.AddFont("Consolas", 14);
-		WhiteBrushIndex = worker.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
-		BlackBrushIndex = worker.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
+		WhiteBrushIndex = worker.AddSolidBrush(new Color(255, 255, 255));
+		BlackBrushIndex = worker.AddSolidBrush(new Color(0, 0, 0));
 
 		Autorize();
 
@@ -57,12 +66,21 @@ internal class MusicSystem
 
 		if (key == Keys.NumPad6) PlayNextStationTrack();
 	}
-
+	
 	private void PlayNextStationTrack()
 	{
-		string link = GetTrackFromStation("user:onyourwave", out string name);
+		if (!StationTracks.Any()) UpdateStationTracksQueue(StationId);
+		if (PlayTrackId is null) PlayTrackId = StationTracks.First().Key;
 
-		SoundName = name;
+		var unplayedTracks = StationTracks.SkipWhile((pair) => pair.Key != PlayTrackId).Skip(1);
+
+		var track = unplayedTracks.Any() ? unplayedTracks.First() : StationTracks.First();
+
+		string link = GetTrackLink(track.Key);
+
+		PlayTrackId = track.Key;
+
+		SoundName = $"{track.Value["artists"].First["name"].Value<string>()} - {track.Value["title"].Value<string>()}";
 
 		PlayTrack(link);
 	}
@@ -87,12 +105,26 @@ internal class MusicSystem
 		Player.Play();
 	}
 
-	private static string GetTrackFromStation(string stationId, out string name)
+	private void UpdateStationTracksQueue(string stationId)
 	{
-		var tracks = Rotor.GetTrack(stationId);
-		var track = tracks["result"]["sequence"].First["track"];
-		var info = Track.GetDownloadInfoWithToken(track["id"].Value<string>());
-		name = $"{track["artists"].First["name"].Value<string>()} - {track["title"].Value<string>()}";
+		do
+		{
+			var tracks = Rotor.GetTrack(stationId)["result"]["sequence"];
+
+			foreach (var item in tracks)
+			{
+				string id = item["track"]["id"].Value<string>();
+
+				if (!StationTracks.ContainsKey(id)) StationTracks.Add(id, item["track"]);
+			}
+
+		} while (StationTracks.Count < 10);
+		//if (StationTracks.Count > 10) StationTracks = new(StationTracks.Skip(5));
+	}
+
+	private static string GetTrackLink(string trackId)
+	{
+		var info = Track.GetDownloadInfoWithToken(trackId);
 		var link = Track.GetDirectLink(info["result"].First["downloadInfoUrl"].Value<string>());
 
 		return link;
