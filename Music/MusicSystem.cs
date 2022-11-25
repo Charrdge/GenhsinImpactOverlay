@@ -10,13 +10,15 @@ internal class MusicSystem
 {
 	private GraphicsWorker Worker { get; init; }
 
-	private WasapiOut Player { get; set; } = new();
+	private WasapiOut? Player { get; set; }
 	private MediaFoundationReader? Mf { get; set; }
 	private string? SoundName { get; set; }
 
 	private string FontIndex { get; init; }
 	private string WhiteBrushIndex { get; init; }
 	private string BlackBrushIndex { get; init; }
+
+	//private Task? Playertask { get; set; }
 
 	public MusicSystem(GraphicsWorker worker)
 	{
@@ -34,8 +36,6 @@ internal class MusicSystem
 		//var station = stateDash["result"]["stations"].First;
 
 		PlayNextStationTrack();
-
-		Player.PlaybackStopped += (sender, e) => PlayNextStationTrack();
 
 		ButtonHook.OnKeyDown += ButtonHook_OnKeyDown;
 
@@ -72,10 +72,14 @@ internal class MusicSystem
 		if (Mf is not null) Mf.Dispose();
 		Mf = new(link);
 
-		Player.Stop();
-		Player.Dispose();
+		if (Player is not null)
+		{
+			Player.Stop();
+			Player.Dispose();
+		}
 
 		Player = new();
+		Player.PlaybackStopped += (sender, e) => PlayNextStationTrack();
 		Player.Init(Mf);
 		Player.Play();
 	}
