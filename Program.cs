@@ -46,11 +46,11 @@ Console.WriteLine(isAllowedSetForegroundWindow.ToString());
 
 ButtonHook.OnKeyDown += (int vkCode) =>
 {
-	if ((Keys)vkCode == Keys.C)
+	if ((Keys)vkCode == Keys.NumPad9)
 	{
 		bool foregroundWindowHasSet = SetForegroundWindow(overlayWindow);
 #if DEBUG
-		//Console.WriteLine($"Set foreground window - {foregroundWindowHasSet}");
+		Console.WriteLine($"Set foreground window - {foregroundWindowHasSet}");
 #endif
 	}
 };

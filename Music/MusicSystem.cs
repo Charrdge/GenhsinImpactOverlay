@@ -1,8 +1,10 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using System.Text.Json;
+using Newtonsoft.Json.Linq;
 using YandexMusicApi;
 using NAudio.Wave;
 using System.Windows.Forms;
 using GameOverlay.Drawing;
+using System.Text.Json.Nodes;
 
 namespace GenshinImpactOverlay.Music;
 
@@ -26,9 +28,9 @@ internal class MusicSystem
 
 	#region Station data
 	private string StationId { get; set; } = "user:onyourwave";
-	private Dictionary<string, JToken> StationTracks { get; } = new(20);
+	private Dictionary<string, JToken> StationTracks { get; } = new();
 	#endregion Station data
-
+	
 	public MusicSystem(GraphicsWorker worker)
 	{
 		Worker = worker;
@@ -40,13 +42,13 @@ internal class MusicSystem
 		Autorize();
 
 		Console.WriteLine(Token.token);
-
+		
 		//var stateDash = Rotor.StationDashboard();
 		//var station = stateDash["result"]["stations"].First;
 
 		PlayNextStationTrack();
 
-		ButtonHook.OnKeyDown += ButtonHook_OnKeyDown;
+		InputHook.OnKeyDown += ButtonHook_OnKeyDown;
 
 		worker.OnDrawGraphics += Worker_OnDrawGraphics;
 	}
@@ -56,23 +58,37 @@ internal class MusicSystem
 		if (SoundName is not null)
 		{
 			Point point = new(15, 15);
-			e.Graphics.DrawText(Worker.Fonts[FontIndex], (SolidBrush) Worker.Brushes[WhiteBrushIndex], point, SoundName);
+			e.Graphics.DrawText(Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], point, SoundName);
 		}
 	}
 
-	private void ButtonHook_OnKeyDown(int vkCode)
+	private void ButtonHook_OnKeyDown(Keys key)
 	{
-		var key = (Keys)vkCode;
-
 		if (key == Keys.NumPad6) PlayNextStationTrack();
+		else if (key == Keys.NumPad4) SwitchTrackPause();
 	}
 	
+	private void SwitchTrackPause()
+	{
+		if (Player is not null) switch (Player.PlaybackState)
+		{
+			case PlaybackState.Paused:
+				Player.Play();
+				break;
+			case PlaybackState.Playing:
+				Player.Pause();
+				break;
+		}
+	}
+
 	private void PlayNextStationTrack()
 	{
 		if (!StationTracks.Any()) UpdateStationTracksQueue(StationId);
 		if (PlayTrackId is null) PlayTrackId = StationTracks.First().Key;
 
 		var unplayedTracks = StationTracks.SkipWhile((pair) => pair.Key != PlayTrackId).Skip(1);
+
+		if (unplayedTracks.Count() < 2) UpdateStationTracksQueue(StationId); 
 
 		var track = unplayedTracks.Any() ? unplayedTracks.First() : StationTracks.First();
 
@@ -107,6 +123,8 @@ internal class MusicSystem
 
 	private void UpdateStationTracksQueue(string stationId)
 	{
+		int count = StationTracks.Count;
+
 		do
 		{
 			var tracks = Rotor.GetTrack(stationId)["result"]["sequence"];
@@ -118,7 +136,9 @@ internal class MusicSystem
 				if (!StationTracks.ContainsKey(id)) StationTracks.Add(id, item["track"]);
 			}
 
-		} while (StationTracks.Count < 10);
+			Thread.Sleep(100); // Ограничивает скорость отправки запросов во избежание фризов
+
+		} while (StationTracks.Count < count + 5);
 		//if (StationTracks.Count > 10) StationTracks = new(StationTracks.Skip(5));
 	}
 
@@ -132,12 +152,15 @@ internal class MusicSystem
 
 	private static string Autorize()
 	{
-		string fileName = "token.txt";
+		string fileName = "config.json";
+		string yaMusicJsonName = "yandex_music";
+		string tokenJsonName = "token";
 
-		if (new FileInfo(fileName).Exists)
+		JsonElement rootElement = JsonDocument.Parse(GetJsonFileAsString(fileName)).RootElement;
+		Console.WriteLine(rootElement);
+		if (rootElement.TryGetProperty(yaMusicJsonName, out JsonElement yaMusicJson) && yaMusicJson.TryGetProperty(tokenJsonName, out JsonElement tokenJson))
 		{
-			using StreamReader reader = new(fileName);
-			Token.token = reader.ReadLine();
+			Token.token = tokenJson.GetString();
 		}
 
 		while (Token.token is null || Token.token == "" || Account.ShowInformAccount()["error"] is not null)
@@ -146,8 +169,18 @@ internal class MusicSystem
 			Token.GetToken(login, password);
 		}
 
-		using StreamWriter writer = new(fileName);
-		writer.WriteLine(Token.token);
+		Console.WriteLine(Token.token);
+
+		JsonNode rootNode = JsonNode.Parse(GetJsonFileAsString(fileName));
+
+		if (rootNode[yaMusicJsonName] is not null) rootNode[yaMusicJsonName][tokenJsonName] = Token.token;
+		else rootNode[yaMusicJsonName] = new JsonObject 
+		{
+			[tokenJsonName] = Token.token
+		};
+		Console.WriteLine(rootNode);
+		using StreamWriter streamWriter = new(fileName);
+		streamWriter.Write(rootNode.ToString());
 
 		return Token.token;
 
@@ -168,6 +201,13 @@ internal class MusicSystem
 			} while (password is null);
 
 			return (login, password);
+		}
+	
+		static string GetJsonFileAsString(string fileName)
+		{
+			using StreamReader reader = new(fileName);
+			string file = reader.ReadToEnd();
+			return file;
 		}
 	}
 }
