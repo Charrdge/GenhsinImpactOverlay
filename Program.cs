@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 #region Hello
 #if DEBUG
-Console.WriteLine("Hello, Debug world!");
+	Console.WriteLine("Hello, Debug world!");
 string name = "devenv"; // PhotosApp devenv
 #else
 Console.WriteLine("Hello, world!");
@@ -13,7 +13,7 @@ string name = "GenshinImpact";
 #endregion
 
 #region Button hook
-Task hook = new(ButtonHook.Run);
+Task hook = new(InputHook.Run);
 hook.Start();
 #endregion
 
@@ -31,53 +31,55 @@ IntPtr overlayWindow = Process.GetCurrentProcess().MainWindowHandle;
 
 Console.WriteLine($"Get process {name} successfuly");
 
-#region Foreground switching
-[DllImport("user32.dll")]
-static extern bool AllowSetForegroundWindow(int dwProcessId);
+[DllImport("kernel32.dll")]
+static extern IntPtr GetConsoleWindow();
 
 [DllImport("user32.dll")]
-static extern bool SetForegroundWindow(IntPtr hWnd);
+static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-bool isAllowedSetForegroundWindow = AllowSetForegroundWindow(Environment.ProcessId);
+var handle = GetConsoleWindow();
+ShowWindow(handle, 5);
 
-#if DEBUG
-Console.WriteLine(isAllowedSetForegroundWindow.ToString());
-#endif
+bool showConsole = true;
 
-ButtonHook.OnKeyDown += (int vkCode) =>
+InputHook.OnKeyDown += (key) =>
 {
-	if ((Keys)vkCode == Keys.NumPad9)
+	if (key == Keys.NumPad8)
 	{
-		bool foregroundWindowHasSet = SetForegroundWindow(overlayWindow);
-#if DEBUG
-		Console.WriteLine($"Set foreground window - {foregroundWindowHasSet}");
-#endif
+		ShowWindow(handle, showConsole ? 0 : 5); // 0 - hide . 5 1- show
+		showConsole = !showConsole;
 	}
 };
-#endregion
-
 
 GameOverlay.TimerService.EnableHighPrecisionTimers();
 using (GraphicsWorker graphicsWorker = new(handleWindow))
 {
-	Console.WriteLine("Run cooldown system? (y - yes)");
-	if (Console.ReadLine() == "y")
-	{
-		var keys = new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 };
-		//GenshinImpactOverlay.Cooldowns.CooldownSystem cooldownSystem = new(graphicsWorker, keys, new TimeSpan(0, 1, 30));
-	}
+	_ = new GenshinImpactOverlay.Starter(graphicsWorker);
 
-	Console.WriteLine("Run music system? (y - yes)");
-	if (Console.ReadLine() == "y")
-	{
-		GenshinImpactOverlay.Music.MusicSystem system = new(graphicsWorker);
-	}
+	//Console.WriteLine("Run cooldown system? (y - yes)");
+	//if (Console.ReadLine() == "y")
+	//{
+	//	var keys = new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 };
+	//	GenshinImpactOverlay.Cooldowns.CooldownSystem cooldownSystem = new(graphicsWorker, keys, new TimeSpan(0, 1, 30));
+	//	Console.WriteLine("Cooldown system is running");
+	//}
 
-	Console.WriteLine("Run chan system? (y - yes)");
-	if (Console.ReadLine() == "y")
-	{
-		GenshinImpactOverlay.ImageBoard.ImageBoardSystem chanSystem = new(graphicsWorker);
-	}
+	//Console.WriteLine("Run music system? (y - yes)");
+	//if (Console.ReadLine() == "y")
+	//{
+	//	GenshinImpactOverlay.Music.MusicSystem system = new(graphicsWorker);
+	//	Console.WriteLine("Music system is running");
+	//}
+
+	//Console.WriteLine("Run chan system? (y - yes)");
+	//if (Console.ReadLine() == "y")
+	//{
+	//	GenshinImpactOverlay.ImageBoard.ImageBoardSystem chanSystem = new(graphicsWorker);
+	//	Console.WriteLine("Imageboard system is running");
+	//}
 
 	graphicsWorker.Run();
 }
+
+Process.GetProcessesByName(name).First().WaitForExit();
+Process.GetCurrentProcess().Kill();
