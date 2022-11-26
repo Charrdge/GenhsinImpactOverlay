@@ -14,6 +14,7 @@ internal class GraphicsWorker : IDisposable
 	/// </summary>
 	private StickyWindow Overlay { get; init; }
 
+	#region Resources
 	/// <summary>
 	/// Словарь цветов
 	/// </summary>
@@ -23,6 +24,7 @@ internal class GraphicsWorker : IDisposable
 	/// Словарь шрифтов
 	/// </summary>
 	public Dictionary<string, FontHandler> Fonts { get; } = new();
+	#endregion Resources
 
 	#region OnDrawGraphic event
 	/// <summary>
@@ -64,9 +66,9 @@ internal class GraphicsWorker : IDisposable
 		Overlay.DrawGraphics += Overlay_DrawGraphics;
 		Overlay.DestroyGraphics += Overlay_DestroyGraphics;
 
-		ButtonHook.OnKeyDown += (int vkCode) =>
+		InputHook.OnKeyDown += (Keys key) =>
 		{
-			if (((Keys)vkCode) == Keys.NumPad1) IsHidden = !IsHidden;
+			if (key == Keys.NumPad1) IsHidden = !IsHidden;
 		};
 	}
 
@@ -96,11 +98,14 @@ internal class GraphicsWorker : IDisposable
 	{
 		string name = GenerateName(fontFamilyName, size, bold, italic, wordWrapping);
 
+		if (Fonts.ContainsKey(name)) return name;
 		bool removed = Fonts.Remove(name, out FontHandler? oldValue);
 		if (removed && oldValue is not null) oldValue.Dispose();
 
 		bool added = Fonts.TryAdd(name, new FontHandler(fontFamilyName, size, bold, italic, wordWrapping));
 		if (!added) throw new ArgumentException("Fonts not added");
+
+		if (Overlay.IsInitialized) Overlay.Recreate();
 
 		return name;
 
@@ -124,11 +129,14 @@ internal class GraphicsWorker : IDisposable
 	{
 		string name = GenerateName(color);
 
+		if (Brushes.ContainsKey(name)) return name;
 		bool removed = Brushes.Remove(name, out SolidBrushHandler? oldValue);
 		if (removed && oldValue is not null) oldValue.Dispose();
 
 		bool added = Brushes.TryAdd(name, new SolidBrushHandler(color));
 		if (!added) throw new ArgumentException("Solid Brush not added", nameof(color));
+
+		if (Overlay.IsInitialized) Overlay.Recreate();
 
 		return name;
 
