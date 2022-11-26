@@ -29,6 +29,7 @@ namespace GenshinImpactOverlay.GraphicWorkers
 
 		public void Dispose() => Font?.Dispose();
 
-		public static implicit operator Font(FontHandler fontWorker) => fontWorker.Font ?? throw new NullReferenceException($"{nameof(Font)} not initialized");
+		public static implicit operator Font(FontHandler fontHandler) => 
+			fontHandler.Font ?? throw new NullReferenceException($"{nameof(Font)} not initialized");
 	}
 }

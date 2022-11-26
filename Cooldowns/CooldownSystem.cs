@@ -45,10 +45,8 @@ internal class CooldownSystem : IDisposable
 		string white = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
 		string black = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
 
-		ButtonHook.OnKeyDown += (vkCode) =>
+		InputHook.OnKeyDown += (key) =>
 		{
-			var key = (Keys)vkCode;
-
 			if (LastClickTimes.ContainsKey(key)) LastSelectCharKey = key;
 			else if (key == Keys.E) LastClickTimes[LastSelectCharKey] = DateTime.Now;
 		};
