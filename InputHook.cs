@@ -21,11 +21,11 @@ internal static class InputHook
 	#endregion DllImport
 
 	#region Priorities
-	public static InputPriority InputPriority { get; private set; }
+	public static InputPriorityEnum InputPriority { get; private set; } = InputPriorityEnum.Normal;
 
 	public static string? SystemInputName { get; private set; }
 
-	public static bool TrySwitchPriority(InputPriority priority)
+	public static bool TrySwitchPriority(InputPriorityEnum priority)
 	{
 		InputPriority = priority;
 		return true;
@@ -36,14 +36,16 @@ internal static class InputHook
 		if (SystemInputName == systemName) SystemInputName = null;
 		else return false;
 
+		if (InputPriority == InputPriorityEnum.System) InputPriority = InputPriorityEnum.Normal;
 		return true;
 	}
 
 	public static bool TrySetSystemLock(string systemName)
 	{
-		if (SystemInputName is not null) SystemInputName = systemName;
+		if (SystemInputName is null) SystemInputName = systemName;
 		else return false;
 
+		InputPriority = InputPriorityEnum.System;
 		return true;
 	}
 	#endregion Priorities
@@ -110,27 +112,22 @@ internal static class InputHook
 	private static IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
 	{
 		KBDLLHOOKSTRUCT lCode = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
+		
+		if ((Keys)lCode.vkCode == Keys.Oemtilde)
+		{
+			if (nCode == 0 && lCode.flags != KBDLLHOOKSTRUCTFlags.LLKHF_UP)
+			{
+				IsHandleInputLocked = !IsHandleInputLocked;
+			}
+		}
 
 		if (nCode == 0 && lCode.flags == KBDLLHOOKSTRUCTFlags.LLKHF_UP)
 		{
+			//Console.WriteLine($"{(Keys)lCode.vkCode} | {InputPriority} | {SystemInputName}");
+
 			OnKeyUp?.Invoke(null, new ((Keys)lCode.vkCode, InputPriority, SystemInputName));
-
-			//if (((Keys)lCode.vkCode) == Keys.NumPad3)
-			//{
-			//	IsLockedInput = !IsLockedInput;
-			//	Console.WriteLine($"Locked is {IsLockedInput}");
-			//}
-			//if (!IsLockedInput)
-			//{
-			//	if (Text is not null) Text += Convert.ToChar(lCode.vkCode);
-			//	else OnKeyUp?.Invoke((Keys)lCode.vkCode);
-			//}
 		}
-
-		//if (!IsLockedKeyboard) return (IntPtr)1;
-
-		//if ((Keys)lCode.vkCode == Keys.End) Process.GetCurrentProcess().Kill();
-
+		
 		if (IsHandleInputLocked) return (IntPtr)1;
 
 		return CallNextHookEx(_keyboardHookID, nCode, wParam, lParam);
@@ -141,7 +138,7 @@ internal static class InputHook
 	private static bool TryInputText(Func<string, bool> onUpdateString, Action<string> onEndInputString, string baseStr = "", bool isMultiline = false)
 	{
 
-		InputPriority = InputPriority.Text;
+		InputPriority = InputPriorityEnum.Text;
 		_text = baseStr;
 
 		Keys endKey = isMultiline ? Keys.Escape : Keys.Enter;
@@ -152,7 +149,7 @@ internal static class InputHook
 
 		void OnKeyUpEvent(object? sender, OnKeyUpEventArgs eventArgs)
 		{
-			if (eventArgs.InputPriority >= InputPriority.Locked || _text is null) return;
+			if (eventArgs.InputPriority >= InputPriorityEnum.Locked || _text is null) return;
 
 			Keys key = eventArgs.Key;
 
@@ -174,7 +171,7 @@ internal static class InputHook
 
 			onEndInputString(text);
 			_text = null;
-			if (InputPriority == InputPriority.Text) InputPriority = InputPriority.Normal;
+			if (InputPriority == InputPriorityEnum.Text) InputPriority = InputPriorityEnum.Normal;
 		}
 	}
 
