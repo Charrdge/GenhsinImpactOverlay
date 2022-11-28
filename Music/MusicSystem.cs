@@ -5,11 +5,14 @@ using NAudio.Wave;
 using System.Windows.Forms;
 using GameOverlay.Drawing;
 using System.Text.Json.Nodes;
+using GenshinImpactOverlay.EventsArgs;
 
 namespace GenshinImpactOverlay.Music;
 
 internal class MusicSystem
 {
+	private const string SYSNAME = "Music";
+
 	private GraphicsWorker Worker { get; init; }
 
 	#region Player fields
@@ -48,7 +51,7 @@ internal class MusicSystem
 
 		PlayNextStationTrack();
 
-		InputHook.OnKeyDown += ButtonHook_OnKeyDown;
+		InputHook.OnKeyUp += ButtonHook_OnKeyDown;
 
 		worker.OnDrawGraphics += Worker_OnDrawGraphics;
 	}
@@ -62,8 +65,11 @@ internal class MusicSystem
 		}
 	}
 
-	private void ButtonHook_OnKeyDown(Keys key)
+	private void ButtonHook_OnKeyDown(object? _, OnKeyUpEventArgs eventArgs)
 	{
+		if (eventArgs.InputPriority > InputPriorityEnum.Normal && eventArgs.System != SYSNAME) return;
+
+		Keys key = eventArgs.Key;
 		if (key == Keys.NumPad6) PlayNextStationTrack();
 		else if (key == Keys.NumPad4) SwitchTrackPause();
 	}

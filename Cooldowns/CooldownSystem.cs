@@ -7,6 +7,8 @@ namespace GenshinImpactOverlay.Cooldowns;
 /// </summary>
 internal class CooldownSystem : IDisposable
 {
+	private const string SYSNAME = "Cooldown";
+
 	/// <summary>
 	/// Хранит время с последнего нажатия навыка каждого персонажа
 	/// </summary>
@@ -45,8 +47,12 @@ internal class CooldownSystem : IDisposable
 		string white = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
 		string black = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
 
-		InputHook.OnKeyDown += (key) =>
+		InputHook.OnKeyUp += (_, eventArgs) =>
 		{
+			if (eventArgs.InputPriority > InputPriorityEnum.Normal && eventArgs.System != SYSNAME) return;
+
+			Keys key = eventArgs.Key;
+
 			if (LastClickTimes.ContainsKey(key)) LastSelectCharKey = key;
 			else if (key == Keys.E) LastClickTimes[LastSelectCharKey] = DateTime.Now;
 		};

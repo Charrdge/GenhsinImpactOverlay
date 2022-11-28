@@ -2,10 +2,14 @@
 
 using GameOverlay.Drawing;
 
+using GenshinImpactOverlay.EventsArgs;
+
 namespace GenshinImpactOverlay;
 
 internal class Starter
 {
+	private const string SYSNAME = "Starter";
+
 	GraphicsWorker GraphicsWorker { get; }
 
 	#region Resources
@@ -30,13 +34,20 @@ internal class Starter
 
 		GraphicsWorker.OnDrawGraphics += GraphicsWorker_OnDrawGraphics;
 
-		InputHook.OnKeyDown += InputHook_OnKeyDown;
+		InputHook.TrySetSystemLock(SYSNAME);
+
+		InputHook.OnKeyUp += InputHook_OnKeyDown;
 	}
 
-	private void InputHook_OnKeyDown(Keys key)
+	private void InputHook_OnKeyDown(object? _, OnKeyUpEventArgs eventArgs)
 	{
+		if (eventArgs.InputPriority >= InputPriorityEnum.Locked && eventArgs.System != SYSNAME) return;
+
+		Keys key = eventArgs.Key;
+
 		if (InitSystemTask is null)
 		{
+
 			if (key == Keys.NumPad5)
 			{
 				if (MusicSystem is null)
@@ -80,8 +91,13 @@ internal class Starter
 				else if (CooldownSystem is null) CooldownSystem = false;
 				else if (ImageBoardSystem is null) ImageBoardSystem = false;
 			}
-		}	
 
+			if (MusicSystem is not null && CooldownSystem is not null && ImageBoardSystem is not null)
+			{
+				InputHook.OnKeyUp -= InputHook_OnKeyDown;
+				InputHook.TryClearSystemLock(SYSNAME);
+			}
+		}
 	}
 
 	private void GraphicsWorker_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e)

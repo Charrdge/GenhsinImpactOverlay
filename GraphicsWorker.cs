@@ -9,6 +9,8 @@ using System.Windows.Forms;
 /// </summary>
 internal class GraphicsWorker : IDisposable
 {
+	private const string SYSNAME = "Graphic";
+
 	/// <summary>
 	/// Объект через который происходит генерация графики
 	/// </summary>
@@ -66,8 +68,12 @@ internal class GraphicsWorker : IDisposable
 		Overlay.DrawGraphics += Overlay_DrawGraphics;
 		Overlay.DestroyGraphics += Overlay_DestroyGraphics;
 
-		InputHook.OnKeyDown += (Keys key) =>
+		InputHook.OnKeyUp += (_, eventArgs) =>
 		{
+			if (eventArgs.InputPriority > InputPriorityEnum.Locked && eventArgs.System != SYSNAME) return;
+
+			Keys key = eventArgs.Key;
+
 			if (key == Keys.NumPad1) IsHidden = !IsHidden;
 		};
 	}

@@ -1,6 +1,7 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Diagnostics;
+using GenshinImpactOverlay.Map;
 
 #region Hello
 #if DEBUG
@@ -42,13 +43,19 @@ ShowWindow(handle, 5);
 
 bool showConsole = true;
 
-InputHook.OnKeyDown += (key) =>
+InputHook.OnKeyUp += (_, eventArgs) =>
 {
+	Keys key = eventArgs.Key;
+
 	if (key == Keys.NumPad8)
 	{
 		ShowWindow(handle, showConsole ? 0 : 5); // 0 - hide . 5 1- show
 		showConsole = !showConsole;
 	}
+	else if (key == Keys.End)
+	{
+		Process.GetCurrentProcess().Kill();
+	}	
 };
 
 GameOverlay.TimerService.EnableHighPrecisionTimers();
