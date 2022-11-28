@@ -1,18 +1,10 @@
 ﻿using System.Diagnostics;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using GenshinImpactOverlay.EventsArgs;
 
 internal static class InputHook
 {
-	/// <summary>
-	/// Callback делегат получения нажатий клавиш. 
-	/// </summary>
-	/// <param name="nCode"></param>
-	/// <param name="wParam"></param>
-	/// <param name="lParam"></param>
-	/// <returns></returns>
-	private delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
-
 	#region DllImport
 	[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 	private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelProc lpfn, IntPtr hMod, uint dwThreadId);
@@ -27,6 +19,43 @@ internal static class InputHook
 	[DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
 	private static extern IntPtr GetModuleHandle(string lpModuleName);
 	#endregion DllImport
+
+	#region Priorities
+	public static InputPriority InputPriority { get; private set; }
+
+	public static string? SystemInputName { get; private set; }
+
+	public static bool TrySwitchPriority(InputPriority priority)
+	{
+		InputPriority = priority;
+		return true;
+	}
+
+	public static bool TryClearSystemLock(string systemName)
+	{
+		if (SystemInputName == systemName) SystemInputName = null;
+		else return false;
+
+		return true;
+	}
+
+	public static bool TrySetSystemLock(string systemName)
+	{
+		if (SystemInputName is not null) SystemInputName = systemName;
+		else return false;
+
+		return true;
+	}
+	#endregion Priorities
+
+	/// <summary>
+	/// Callback делегат получения нажатий клавиш. 
+	/// </summary>
+	/// <param name="nCode"></param>
+	/// <param name="wParam"></param>
+	/// <param name="lParam"></param>
+	/// <returns></returns>
+	private delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 
 	#region Keyboard
 	#region Struct
@@ -64,10 +93,92 @@ internal static class InputHook
 	/// </summary>
 	private static IntPtr _keyboardHookID = IntPtr.Zero;
 
-	public delegate void KeyDownDelegate(Keys key);
-	public static event KeyDownDelegate? OnKeyDown;
+	public delegate void KeyUpDelegate(object? sender, OnKeyUpEventArgs eventArgs);
+	public static event KeyUpDelegate? OnKeyUp;
 	
-	public static bool IsLockedKeyboard { get; private set; } = false;
+	public static bool IsHandleInputLocked { get; private set; } = false;
+
+	private static IntPtr SetKeyboardHook(LowLevelProc proc)
+	{
+		using (Process curProcess = Process.GetCurrentProcess())
+		using (ProcessModule curModule = curProcess.MainModule)
+		{
+			return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
+		}
+	}
+
+	private static IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+	{
+		KBDLLHOOKSTRUCT lCode = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
+
+		if (nCode == 0 && lCode.flags == KBDLLHOOKSTRUCTFlags.LLKHF_UP)
+		{
+			OnKeyUp?.Invoke(null, new ((Keys)lCode.vkCode, InputPriority, SystemInputName));
+
+			//if (((Keys)lCode.vkCode) == Keys.NumPad3)
+			//{
+			//	IsLockedInput = !IsLockedInput;
+			//	Console.WriteLine($"Locked is {IsLockedInput}");
+			//}
+			//if (!IsLockedInput)
+			//{
+			//	if (Text is not null) Text += Convert.ToChar(lCode.vkCode);
+			//	else OnKeyUp?.Invoke((Keys)lCode.vkCode);
+			//}
+		}
+
+		//if (!IsLockedKeyboard) return (IntPtr)1;
+
+		//if ((Keys)lCode.vkCode == Keys.End) Process.GetCurrentProcess().Kill();
+
+		if (IsHandleInputLocked) return (IntPtr)1;
+
+		return CallNextHookEx(_keyboardHookID, nCode, wParam, lParam);
+	}
+
+	#region TextInput
+	private static string? _text;
+	private static bool TryInputText(Func<string, bool> onUpdateString, Action<string> onEndInputString, string baseStr = "", bool isMultiline = false)
+	{
+
+		InputPriority = InputPriority.Text;
+		_text = baseStr;
+
+		Keys endKey = isMultiline ? Keys.Escape : Keys.Enter;
+
+		OnKeyUp += OnKeyUpEvent;
+
+		return true;
+
+		void OnKeyUpEvent(object? sender, OnKeyUpEventArgs eventArgs)
+		{
+			if (eventArgs.InputPriority >= InputPriority.Locked || _text is null) return;
+
+			Keys key = eventArgs.Key;
+
+			if (key == endKey) EndInput(_text);
+			else
+			{
+				if (key == Keys.Back) 
+					if (_text.Length > 0) 
+						_text = _text[..^1];
+				else _text += key;
+
+				if (onUpdateString(_text)) EndInput(_text);
+			}
+		}
+
+		void EndInput(string text)
+		{
+			OnKeyUp -= OnKeyUpEvent;
+
+			onEndInputString(text);
+			_text = null;
+			if (InputPriority == InputPriority.Text) InputPriority = InputPriority.Normal;
+		}
+	}
+
+	#endregion TextInput
 	#endregion Keyboard
 
 	#region Mouse
@@ -110,8 +221,26 @@ internal static class InputHook
 	public static event MouseMoveDelegate? OnMouseMove;
 
 	private static bool IsMoved { get; set; }
-	#endregion Mouse
 
+	private static IntPtr SetMouseHook(LowLevelProc proc)
+	{
+		using (Process curProcess = Process.GetCurrentProcess())
+		using (ProcessModule curModule = curProcess.MainModule)
+		{
+			return SetWindowsHookEx(WH_MOUSE_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
+		}
+	}
+
+	private static IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+	{
+		MSLLHOOKSTRUCT lCode = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
+
+		//return (IntPtr)1;
+
+		return CallNextHookEx(_MouseHookID, nCode, wParam, lParam);
+	}
+	#endregion Mouse
+	
 	public static void Run()
 	{
 		#region
@@ -139,53 +268,4 @@ internal static class InputHook
         UnhookWindowsHookEx(_keyboardHookID);
 		UnhookWindowsHookEx(_MouseHookID);
 	}
-
-	private static IntPtr SetMouseHook(LowLevelProc proc)
-	{
-		using (Process curProcess = Process.GetCurrentProcess())
-		using (ProcessModule curModule = curProcess.MainModule)
-		{
-			return SetWindowsHookEx(WH_MOUSE_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
-		}
-	}
-
-	private static IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
-	{
-		MSLLHOOKSTRUCT lCode = Marshal.PtrToStructure<MSLLHOOKSTRUCT>(lParam);
-
-		//return (IntPtr)1;
-
-		return CallNextHookEx(_MouseHookID, nCode, wParam, lParam);
-	}
-
-	private static IntPtr SetKeyboardHook(LowLevelProc proc)
-    {
-        using (Process curProcess = Process.GetCurrentProcess())
-        using (ProcessModule curModule = curProcess.MainModule)
-        {
-            return SetWindowsHookEx(WH_KEYBOARD_LL, proc, GetModuleHandle(curModule.ModuleName), 0);
-        }
-    }
-
-    private static IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
-    {
-		KBDLLHOOKSTRUCT lCode = Marshal.PtrToStructure<KBDLLHOOKSTRUCT>(lParam);
-
-		if (nCode == 0 && lCode.flags == KBDLLHOOKSTRUCTFlags.LLKHF_UP)
-        {
-            
-			if (((Keys)lCode.vkCode) == Keys.NumPad3)
-			{
-                IsLockedKeyboard = !IsLockedKeyboard;
-                Console.WriteLine($"Locked is {IsLockedKeyboard}");
-            }
-            if (!IsLockedKeyboard) OnKeyDown?.Invoke((Keys)lCode.vkCode);
-        }
-
-		//if (!IsLockedKeyboard) return (IntPtr)1;
-
-		if ((Keys)lCode.vkCode == Keys.End) Process.GetCurrentProcess().Kill();
-
-		return CallNextHookEx(_keyboardHookID, nCode, wParam, lParam);
-    }
 }
