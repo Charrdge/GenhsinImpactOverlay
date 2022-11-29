@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Collections.Generic;
+using System.Text.Json;
 using System.Windows.Forms;
 
 namespace GenshinImpactOverlay.ImageBoard;
@@ -117,22 +118,47 @@ internal class ImageBoardSystem : IDisposable
 		if (LockedPost is null) showPosts = Posts.TakeLast(5);
 		else
 		{
-			var list = new List<Post>();
-
 			LinkedListNode<Post> TargetPostNode = Posts.FindLast(LockedPost) ?? throw new NullReferenceException();
 
-			if (TargetPostNode.Previous is not null)
+			List<Post> list = new()
 			{
-				if (TargetPostNode.Previous.Previous is not null) list.Add(TargetPostNode.Previous.Previous.Value);
-				list.Add(TargetPostNode.Previous.Value);
+				TargetPostNode.Value
+			};
+
+			var prepList = new List<Post>();
+			LinkedListNode<Post>? previous = TargetPostNode.Previous;
+			while(prepList.Count < 4)
+			{
+				if (previous is null) break;
+
+				prepList.Add(previous.Value);
+
+				previous = previous.Previous;
 			}
 
-			list.Add(TargetPostNode.Value);
-
-			if (TargetPostNode.Next is not null)
+			var nextList = new List<Post>();
+			LinkedListNode<Post>? next = TargetPostNode.Next;
+			while (nextList.Count < 4)
 			{
-				list.Add(TargetPostNode.Next.Value);
-				if (TargetPostNode.Next.Next is not null) list.Add(TargetPostNode.Next.Next.Value);
+				if (next is null) break;
+
+				nextList.Add(next.Value);
+
+				next = next.Next;
+			}
+
+			int index = 0;
+			while(list.Count < 5)
+			{
+				if (prepList.Count > index)
+				{
+					list.Insert(0, prepList[index]);
+				}
+				if (nextList.Count > index)
+				{
+					list.Add(nextList[index]);
+				}
+				index++;
 			}
 
 			showPosts = list;
