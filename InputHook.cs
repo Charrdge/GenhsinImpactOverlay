@@ -163,7 +163,6 @@ internal static class InputHook
 			
 			Keys key = eventArgs.Key;
 
-			Console.WriteLine(key);
 
 			if (key == endKey) eventWait.Set();
 			else
@@ -180,8 +179,6 @@ internal static class InputHook
 					else if (key.ToString()[0] == 'D' && char.IsNumber(key.ToString()[1])) _text += key.ToString()[1];
 					else _text += key;
 				}
-
-				Console.WriteLine(_text);
 
 				if (onUpdateString(_text)) eventWait.Set();
 			}
