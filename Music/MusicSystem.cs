@@ -6,7 +6,6 @@ using System.Windows.Forms;
 using GameOverlay.Drawing;
 using System.Text.Json.Nodes;
 using GenshinImpactOverlay.EventsArgs;
-using static System.Net.Mime.MediaTypeNames;
 using static GraphicsWorker;
 
 namespace GenshinImpactOverlay.Music;
@@ -73,7 +72,8 @@ internal class MusicSystem
 
 		Keys key = eventArgs.Key;
 		if (key == Keys.NumPad6) PlayNextStationTrack();
-		else if (key == Keys.NumPad4) SwitchTrackPause();
+		else if (key == Keys.NumPad5) SwitchTrackPause();
+		else if (key == Keys.NumPad4) PlayPrevStationTrack();
 	}
 	
 	private void SwitchTrackPause()
@@ -107,6 +107,27 @@ internal class MusicSystem
 		SoundName = $"{track.Value["artists"].First["name"].Value<string>()} - {track.Value["title"].Value<string>()}";
 
 		PlayTrack(link);
+	}
+
+	private void PlayPrevStationTrack()
+	{
+		if (StationTracks.Any())
+		{
+			var prevTracks = StationTracks.Reverse().SkipWhile((pair) => pair.Key != PlayTrackId).Skip(1);
+
+			if (prevTracks.Any())
+			{
+				var track = prevTracks.First();
+
+				string link = GetTrackLink(track.Key);
+
+				PlayTrackId = track.Key;
+
+				SoundName = $"{track.Value["artists"].First["name"].Value<string>()} - {track.Value["title"].Value<string>()}";
+
+				PlayTrack(link);
+			}
+		}
 	}
 
 	private void PlayTrack(string link)
