@@ -135,46 +135,58 @@ internal static class InputHook
 
 	#region TextInput
 	private static string? _text;
-	private static bool TryInputText(Func<string, bool> onUpdateString, Action<string> onEndInputString, string baseStr = "", bool isMultiline = false)
+	public static string TryInputText(Func<string, bool> onUpdateString, string baseStr = "", bool isMultiline = false)
 	{
-
 		InputPriority = InputPriorityEnum.Text;
 		_text = baseStr;
 
 		Keys endKey = isMultiline ? Keys.Escape : Keys.Enter;
 
-		OnKeyUp += OnKeyUpEvent;
+		EventWaitHandle eventWait = new(false, EventResetMode.AutoReset);
 
-		return true;
+		OnKeyUp += OnKeyUpEvent;
+		
+		eventWait.WaitOne();
+
+		OnKeyUp -= OnKeyUpEvent;
+		
+		if (InputPriority == InputPriorityEnum.Text) InputPriority = InputPriorityEnum.Normal;
+
+		string txt = _text;
+		_text = null;
+		
+		return txt;
 
 		void OnKeyUpEvent(object? sender, OnKeyUpEventArgs eventArgs)
 		{
 			if (eventArgs.InputPriority >= InputPriorityEnum.Locked || _text is null) return;
-
+			
 			Keys key = eventArgs.Key;
 
-			if (key == endKey) EndInput(_text);
+			Console.WriteLine(key);
+
+			if (key == endKey) eventWait.Set();
 			else
 			{
-				if (key == Keys.Back) 
-					if (_text.Length > 0) 
+				if (key == Keys.Back)
+				{
+					if (_text.Length > 0)
 						_text = _text[..^1];
-				else _text += key;
+				}
+				else
+				{
+					if (key == Keys.OemPeriod) _text += ".";
+					else if (key == Keys.Space) _text += " ";
+					else if (key.ToString()[0] == 'D' && char.IsNumber(key.ToString()[1])) _text += key.ToString()[1];
+					else _text += key;
+				}
 
-				if (onUpdateString(_text)) EndInput(_text);
+				Console.WriteLine(_text);
+
+				if (onUpdateString(_text)) eventWait.Set();
 			}
 		}
-
-		void EndInput(string text)
-		{
-			OnKeyUp -= OnKeyUpEvent;
-
-			onEndInputString(text);
-			_text = null;
-			if (InputPriority == InputPriorityEnum.Text) InputPriority = InputPriorityEnum.Normal;
-		}
 	}
-
 	#endregion TextInput
 	#endregion Keyboard
 
