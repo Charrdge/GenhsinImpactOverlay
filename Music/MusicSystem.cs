@@ -6,6 +6,8 @@ using System.Windows.Forms;
 using GameOverlay.Drawing;
 using System.Text.Json.Nodes;
 using GenshinImpactOverlay.EventsArgs;
+using static System.Net.Mime.MediaTypeNames;
+using static GraphicsWorker;
 
 namespace GenshinImpactOverlay.Music;
 
@@ -56,7 +58,7 @@ internal class MusicSystem
 		worker.OnDrawGraphics += Worker_OnDrawGraphics;
 	}
 
-	private void Worker_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e)
+	private void Worker_OnDrawGraphics(object? sender, OnDrawGraphicEventArgs e)
 	{
 		if (SoundName is not null)
 		{
@@ -156,14 +158,14 @@ internal class MusicSystem
 		return link;
 	}
 
-	private static string Autorize()
+	private string Autorize()
 	{
 		string fileName = "config.json";
 		string yaMusicJsonName = "yandex_music";
 		string tokenJsonName = "token";
 
 		JsonElement rootElement = JsonDocument.Parse(GetJsonFileAsString(fileName)).RootElement;
-		Console.WriteLine(rootElement);
+		//Console.WriteLine(rootElement);
 		if (rootElement.TryGetProperty(yaMusicJsonName, out JsonElement yaMusicJson) && yaMusicJson.TryGetProperty(tokenJsonName, out JsonElement tokenJson))
 		{
 			Token.token = tokenJson.GetString();
@@ -175,7 +177,7 @@ internal class MusicSystem
 			Token.GetToken(login, password);
 		}
 
-		Console.WriteLine(Token.token);
+		//Console.WriteLine(Token.token);
 
 		JsonNode rootNode = JsonNode.Parse(GetJsonFileAsString(fileName));
 
@@ -184,27 +186,55 @@ internal class MusicSystem
 		{
 			[tokenJsonName] = Token.token
 		};
-		Console.WriteLine(rootNode);
+		//Console.WriteLine(rootNode);
 		using StreamWriter streamWriter = new(fileName);
 		streamWriter.Write(rootNode.ToString());
 
 		return Token.token;
 
-		static (string login, string password) GetPassData()
+		(string login, string password) GetPassData()
 		{
-			string? login;
+			string? login = "";
 			do
 			{
-				Console.WriteLine("Write login");
-				login = Console.ReadLine();
-			} while (login is null);
+				DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
+				{
+					e.Graphics.DrawTextWithBackground(
+						Worker.Fonts[FontIndex],
+						Worker.Brushes[WhiteBrushIndex],
+						Worker.Brushes[BlackBrushIndex],
+						 new Point(50, 100),
+						 $"Write login: {login}");
+				};
 
-			string? password;
+				Worker.OnDrawGraphics += onDrawGraphic_LoginEvent;
+
+				login = InputHook.TryInputText((string loginProccess) => { login = loginProccess; return false; });
+
+				Worker.OnDrawGraphics -= onDrawGraphic_LoginEvent;
+
+			} while (login is null || login.Length == 0);
+
+			string? password = "";
 			do
 			{
-				Console.WriteLine("Write password");
-				password = Console.ReadLine();
-			} while (password is null);
+				DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
+				{
+					e.Graphics.DrawTextWithBackground(
+						Worker.Fonts[FontIndex],
+						Worker.Brushes[WhiteBrushIndex],
+						Worker.Brushes[BlackBrushIndex],
+						 new Point(50, 100),
+						 $"Write password: {password}");
+				};
+
+				Worker.OnDrawGraphics += onDrawGraphic_LoginEvent;
+
+				password = InputHook.TryInputText((string loginProccess) => { password = loginProccess; return false; });
+
+				Worker.OnDrawGraphics -= onDrawGraphic_LoginEvent;
+
+			} while (password is null || password.Length == 0);
 
 			return (login, password);
 		}
