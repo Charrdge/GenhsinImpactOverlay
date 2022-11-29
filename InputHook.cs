@@ -120,6 +120,14 @@ internal static class InputHook
 				IsHandleInputLocked = !IsHandleInputLocked;
 			}
 		}
+		else if ((Keys)lCode.vkCode == Keys.End)
+		{
+			Process.GetCurrentProcess().Kill();
+		}
+		else if ((Keys)lCode.vkCode == Keys.Home)
+		{
+
+		}
 
 		if (nCode == 0 && lCode.flags == KBDLLHOOKSTRUCTFlags.LLKHF_UP)
 		{

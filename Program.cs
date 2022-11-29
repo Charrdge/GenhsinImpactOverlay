@@ -52,10 +52,6 @@ InputHook.OnKeyUp += (_, eventArgs) =>
 		ShowWindow(handle, showConsole ? 0 : 5); // 0 - hide . 5 1- show
 		showConsole = !showConsole;
 	}
-	else if (key == Keys.End)
-	{
-		Process.GetCurrentProcess().Kill();
-	}	
 };
 
 GameOverlay.TimerService.EnableHighPrecisionTimers();
