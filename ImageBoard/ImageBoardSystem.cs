@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Windows.Forms;
 
 namespace GenshinImpactOverlay.ImageBoard;
 
@@ -9,9 +10,13 @@ internal class ImageBoardSystem : IDisposable
 {
 	private const string SYSNAME = "Imageboard";
 
-	private SortedDictionary<int, Post> Posts { get; set; } = new();
+	private LinkedList<Post> Posts { get; set; } = new();
 	private GraphicsWorker Worker { get; init; }
 	private System.Timers.Timer GetNewPostsTimer { get; set; } = new(5000);
+
+	private Post? LockedPost { get; set; }
+
+	private bool NodeMode { get; set; } = false;
 
 	public ImageBoardSystem(GraphicsWorker worker)
 	{
@@ -35,6 +40,56 @@ internal class ImageBoardSystem : IDisposable
 		GetNewPostsTimer.Enabled = true;
 
 		Worker.OnDrawGraphics += Graphics_OnDrawGraphics;
+
+		InputHook.OnKeyUp += InputHook_OnKeyUp;
+	}
+
+	private void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs)
+	{
+		if (eventArgs.InputPriority >= InputPriorityEnum.Locked && eventArgs.System != SYSNAME) return;
+
+		Keys key = eventArgs.Key;
+
+		switch (key)
+		{
+			case Keys.Up:
+				if (eventArgs.System == SYSNAME)
+				{
+					if (LockedPost != Posts.First())
+					{
+						LockedPost = Posts.FindLast(LockedPost).Previous.Value;
+					}
+				}
+				else
+				{
+					if (LockedPost is null)
+					{
+						bool locked = InputHook.TrySetSystemLock(SYSNAME);
+						if (locked) LockedPost = Posts.Last();
+					}
+				}
+				break;
+			case Keys.Down:
+				if (eventArgs.System == SYSNAME)
+				{
+					if (LockedPost is not null && LockedPost != Posts.Last()) LockedPost = Posts.FindLast(LockedPost).Next.Value;
+					else
+					{
+						InputHook.TryClearSystemLock(SYSNAME);
+						LockedPost = null;
+					}
+				}
+				break;
+			case Keys.Left:
+				if (eventArgs.System == SYSNAME)
+				{
+					InputHook.TryClearSystemLock(SYSNAME);
+					LockedPost = null;
+				}
+				break;
+			default:
+				break;
+		}
 	}
 
 	private void Graphics_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e) 
@@ -46,14 +101,34 @@ internal class ImageBoardSystem : IDisposable
 
 		if (Posts.Count == 0) return;
 
-		IEnumerable<KeyValuePair<int, Post>> LastPosts = Posts.TakeLast(4);
-		//IEnumerable<KeyValuePair<long, Post>> LastPosts = Posts.Take(6);
-
-		foreach (KeyValuePair<int, Post> pair in LastPosts.Reverse())
+		IEnumerable<Post> showPosts;
+		if (LockedPost is null) showPosts = Posts.TakeLast(5);
+		else
 		{
-			Post post = pair.Value;
+			var list = new List<Post>();
 
-			upper += post.DrawPost(e.Graphics, Worker, bottom - upper, left);
+			LinkedListNode<Post> TargetPostNode = Posts.FindLast(LockedPost) ?? throw new NullReferenceException();
+
+			if (TargetPostNode.Previous is not null)
+			{
+				if (TargetPostNode.Previous.Previous is not null) list.Add(TargetPostNode.Previous.Previous.Value);
+				list.Add(TargetPostNode.Previous.Value);
+			}
+
+			list.Add(TargetPostNode.Value);
+
+			if (TargetPostNode.Next is not null)
+			{
+				list.Add(TargetPostNode.Next.Value);
+				if (TargetPostNode.Next.Next is not null) list.Add(TargetPostNode.Next.Next.Value);
+			}
+
+			showPosts = list;
+		}
+
+		foreach (Post post in showPosts.Reverse())
+		{
+			upper += post.DrawPost(e.Graphics, Worker, bottom - upper, left, LockedPost == post);
 
 			upper += escape; //небольшой отступ между постами
 		}
@@ -62,7 +137,7 @@ internal class ImageBoardSystem : IDisposable
 	private void GetNewPosts(object? sender, System.Timers.ElapsedEventArgs e)
 	{
 		HttpClient httpClient = new();
-		long threadNum = Posts.First().Key;
+		long threadNum = Posts.First().Num;
 		string requestString = $"https://2ch.hk/api/mobile/v2/info/vg/{threadNum}";
 
 		using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
@@ -81,12 +156,12 @@ internal class ImageBoardSystem : IDisposable
 
 					int num = thread.RootElement.GetProperty("num").GetInt32();
 
-					if (!Posts.ContainsKey(num)) GetAllPosts(httpClient, thread);
+					if (!Posts.Any((arg) => arg.Num == num)) GetAllPosts(httpClient, thread);
 				}
 			}
 		}
 
-		int postNum = Posts.Last().Key;
+		int postNum = Posts.Last().Num;
 
 		requestString = $"https://2ch.hk/api/mobile/v2/after/vg/{threadNum}/{postNum}";
 
@@ -97,7 +172,6 @@ internal class ImageBoardSystem : IDisposable
 
 			using (JsonDocument document = JsonDocument.Parse(strJson))
 			{
-
 				JsonElement root = document.RootElement;
 				JsonElement posts = root.GetProperty("posts");
 				foreach (JsonElement json in posts.EnumerateArray())
@@ -106,7 +180,10 @@ internal class ImageBoardSystem : IDisposable
 
 					if (post is null) throw new Exception();
 
-					Posts.TryAdd(post.Num, post);
+					if (!Posts.Any((arg) => arg.Num == post.Num))
+					{
+						Posts.AddLast(post);
+					}
 				}
 			}
 		}
@@ -140,7 +217,7 @@ internal class ImageBoardSystem : IDisposable
 
 	private void GetAllPosts(HttpClient httpClient, JsonDocument thread)
 	{
-		Posts = new SortedDictionary<int, Post>();
+		Posts = new();
 
 		long threadNum = thread.RootElement.GetProperty("num").GetInt64();
 
@@ -163,12 +240,12 @@ internal class ImageBoardSystem : IDisposable
 
 					if (post is null) throw new Exception();
 
-					Posts.TryAdd(post.Num, post);
+					Posts.AddLast(post);
 				}
 			}
 		}
 	}
-
+	
 	~ImageBoardSystem() => Dispose(disposing: false);
 
 	#region IDisposable

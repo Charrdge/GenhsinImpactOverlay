@@ -88,7 +88,7 @@ internal class Post
 	#endregion Optional
 
 
-	public int DrawPost(Graphics graphics, GraphicsWorker worker, int bottom, int left)
+	public int DrawPost(Graphics graphics, GraphicsWorker worker, int bottom, int left, bool targetPost = false)
 	{
 		int row = 17;
 		int symb = 6;
@@ -180,7 +180,7 @@ internal class Post
 
 		postHeight += row;
 
-		graphics.DrawLine((SolidBrush)worker.Brushes[WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - postHeight), 2f);
+		graphics.DrawLine((SolidBrush)worker.Brushes[targetPost ? BlackBrushIndex : WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - postHeight), 2f);
 
 		return postHeight;
 	}
