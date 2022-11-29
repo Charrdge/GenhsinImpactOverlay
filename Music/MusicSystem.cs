@@ -167,7 +167,7 @@ internal class MusicSystem
 
 			Thread.Sleep(100); // Ограничивает скорость отправки запросов во избежание фризов
 
-		} while (StationTracks.Count < count + 5);
+		} while (StationTracks.Count < count + 2);
 		//if (StationTracks.Count > 10) StationTracks = new(StationTracks.Skip(5));
 	}
 
