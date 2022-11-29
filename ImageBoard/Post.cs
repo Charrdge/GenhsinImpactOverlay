@@ -88,7 +88,7 @@ internal class Post
 	#endregion Optional
 
 
-	public int DrawPost(Graphics graphics, GraphicsWorker worker, int bottom, int left, bool targetPost = false)
+	public int DrawPost(Graphics graphics, GraphicsWorker worker, int bottom, int left, bool targetPost = false, bool extendPost = false)
 	{
 		int row = 17;
 		int symb = 6;
@@ -109,9 +109,9 @@ internal class Post
 			string text = CleanedComment;
 			postHeight = imgHeight > (row * noImageRows) ? imgHeight : (row * noImageRows);
 
-			bool cutted = EditString(ref text, (postWidth - (imgWidth + 10)) / symb, postHeight / (row - 1), out int textRows);
+			bool cutted = EditString(ref text, (postWidth - (imgWidth + 10)) / symb, extendPost ? 0 : postHeight / (row - 1), out int textRows);
 
-			postHeight = imgHeight > (row * textRows) ? imgHeight : (row * noImageRows);
+			postHeight = imgHeight > (row * textRows) ? imgHeight : (row * textRows);
 
 			if (cutted)
 			{
@@ -133,7 +133,7 @@ internal class Post
 			#region Text
 			string text = CleanedComment;
 
-			if (EditString(ref text, postWidth / symb, noImageRows, out int finalRowCount))
+			if (EditString(ref text, postWidth / symb, extendPost ? 0 : noImageRows, out int finalRowCount))
 			{
 				text += "Развернуть...";
 				finalRowCount++;
@@ -206,7 +206,7 @@ internal class Post
 				{
 					if (currentLine.Length > 0)
 					{
-						if (finalRows < maxRows)
+						if (maxRows == 0 || finalRows < maxRows)
 						{
 							text += $"{currentLine}\n";
 							finalRows += 1;
@@ -225,7 +225,7 @@ internal class Post
 				{
 					if (currentLine.Length > 0)
 					{
-						if (finalRows < maxRows)
+						if (maxRows == 0 || finalRows < maxRows)
 						{
 							text += $"{currentLine}\n";
 							finalRows += 1;

@@ -17,6 +17,7 @@ internal class ImageBoardSystem : IDisposable
 	private Post? LockedPost { get; set; }
 
 	private bool NodeMode { get; set; } = false;
+	private bool ExtendFocused { get; set; } = false;
 
 	public ImageBoardSystem(GraphicsWorker worker)
 	{
@@ -83,9 +84,20 @@ internal class ImageBoardSystem : IDisposable
 			case Keys.Left:
 				if (eventArgs.System == SYSNAME)
 				{
-					InputHook.TryClearSystemLock(SYSNAME);
-					LockedPost = null;
+					if (ExtendFocused) ExtendFocused = false;
+					else
+					{
+						InputHook.TryClearSystemLock(SYSNAME);
+						LockedPost = null;
+					}
+
 				}
+				break;
+			case Keys.Right:
+				if (eventArgs.System == SYSNAME)
+				{
+					if (LockedPost is not null && !ExtendFocused) ExtendFocused = true;
+				}	
 				break;
 			default:
 				break;
@@ -128,7 +140,7 @@ internal class ImageBoardSystem : IDisposable
 
 		foreach (Post post in showPosts.Reverse())
 		{
-			upper += post.DrawPost(e.Graphics, Worker, bottom - upper, left, LockedPost == post);
+			upper += post.DrawPost(e.Graphics, Worker, bottom - upper, left, LockedPost == post, LockedPost == post && ExtendFocused);
 
 			upper += escape; //небольшой отступ между постами
 		}
