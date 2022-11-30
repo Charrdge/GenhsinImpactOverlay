@@ -87,15 +87,31 @@ internal class Post
 	[JsonPropertyName("dislikes")] public int? Dislikes { get; set; }
 	#endregion Optional
 
+	#region premath
+	int? _lastBottom;
+	int? _lastLeft;
+	bool? _lastTargetPost;
+	bool? _lastExtendPost;
 
+	string _mathText;
+	Point _mathPoint;
+	int _mathPostHeight;
+	int _mathImgLeft;
+	#endregion premath
+
+	private static object _locked = new();
 	public int DrawPost(Graphics graphics, GraphicsWorker worker, int bottom, int left, bool targetPost = false, bool extendPost = false)
 	{
+		#region Nums
 		int row = 17;
 		int symb = 6;
 		int noImageRows = 6;
 		int imgWidth = 100;
 		int postWidth = 430;
 		int postHeight = 0;
+		#endregion
+
+		bool mathed = _lastBottom == bottom && _lastLeft == left && _lastTargetPost == targetPost && _lastExtendPost == extendPost;
 
 		if (Files is not null && Files.Length == 1)
 		{
@@ -106,53 +122,75 @@ internal class Post
 			#endregion Files
 
 			#region Text
-			string text = CleanedComment;
-			postHeight = imgHeight > (row * noImageRows) ? imgHeight : (row * noImageRows);
-
-			bool cutted = EditString(ref text, (postWidth - (imgWidth + 10)) / symb, extendPost ? 0 : postHeight / (row - 1), out int textRows);
-
-			postHeight = imgHeight > (row * textRows) ? imgHeight : (row * textRows);
-
-			if (cutted)
+			string text;
+			Point point;
+			if (mathed)
 			{
-				text += "Развернуть...";
-				postHeight += row;
+				text = _mathText;
+				point = _mathPoint;
 			}
+			else
+			{
+				text = CleanedComment;
+				postHeight = imgHeight > (row * noImageRows) ? imgHeight : (row * noImageRows);
 
-			Point point = new(left + imgWidth + 10, bottom - imgHeight); // h, v
+				bool cutted = EditString(ref text, (postWidth - (imgWidth + 10)) / symb, extendPost ? 0 : postHeight / (row - 1), out int textRows);
+
+				postHeight = imgHeight > (row * textRows) ? imgHeight : (row * textRows);
+
+				if (cutted)
+				{
+					text += "Развернуть...";
+					postHeight += row;
+				}
+
+				_mathPoint = point = new(left + imgWidth + 10, bottom - imgHeight); // h, v
+				_mathText = text;
+			}
 
 			if (worker.Fonts[FontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
 			{
-			graphics.DrawText(
-				worker.Fonts[FontIndex], // Шрифт текста
-				(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
-				point, // Положение текста
-				text); // Текст
+				graphics.DrawText(
+					worker.Fonts[FontIndex], // Шрифт текста
+					(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+					point, // Положение текста
+					text); // Текст
 			}
 			#endregion Text
 		}
 		else
 		{
 			#region Text
-			string text = CleanedComment;
+			string text;
+			Point point;
 
-			if (EditString(ref text, postWidth / symb, extendPost ? 0 : noImageRows, out int finalRowCount))
+			if (mathed)
 			{
-				text += "Развернуть...";
-				finalRowCount++;
+				text = _mathText;
+				point = _mathPoint;
 			}
+			else
+			{
+				text = CleanedComment;
 
-			postHeight += finalRowCount * row;
+				if (EditString(ref text, postWidth / symb, extendPost ? 0 : noImageRows, out int finalRowCount))
+				{
+					text += "Развернуть...";
+					finalRowCount++;
+				}
 
-			Point point = new(left, bottom - postHeight); // h, v
+				postHeight += finalRowCount * row;
+
+				point = new(left, bottom - postHeight); // h, v
+			}
 
 			if (worker.Fonts[FontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
 			{
-			graphics.DrawText(
-				worker.Fonts[FontIndex], // Шрифт текста
-				(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
-				point, // Положение текста
-				text); // Текст
+				graphics.DrawText(
+					worker.Fonts[FontIndex], // Шрифт текста
+					(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+					point, // Положение текста
+					text); // Текст
 			}
 			#endregion Text
 
@@ -167,7 +205,9 @@ internal class Post
 				{
 					File file = Files[index];
 
-					file.DrawFileThumb(graphics, bottom - postHeight, left + ((imgWidth + 5) * index), imgWidth, out int height);
+					int leftImg = mathed ? _mathImgLeft : bottom - postHeight;
+
+					file.DrawFileThumb(graphics, leftImg, left + ((imgWidth + 5) * index), imgWidth, out int height);
 
 					if (height > maxImageHeight) maxImageHeight = height;
 				}
@@ -180,19 +220,25 @@ internal class Post
 
 		if (worker.Fonts[BFontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
 		{
-		graphics.DrawText(
-			worker.Fonts[BFontIndex], // Шрифт текста
-			(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
-			new(left, bottom - postHeight - row), // Положение текста
-			$"№{Num}"); // Текст
+			int y = bottom - (mathed ? _mathPostHeight : postHeight) - row;
+			graphics.DrawText(
+				worker.Fonts[BFontIndex], // Шрифт текста
+				(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+				new(left, y), // Положение текста
+				$"№{Num}"); // Текст
 		}
 		postHeight += row;
 
 		if (worker.Brushes[targetPost ? BlackBrushIndex : WhiteBrushIndex].IsInitialized)
 		{
+			int endY = bottom - (mathed ? _mathPostHeight : postHeight);
+			graphics.DrawLine(
+				(SolidBrush)worker.Brushes[targetPost ? BlackBrushIndex : WhiteBrushIndex],
+				new Line(left - 5, bottom, left - 5, endY), 2f);
 		}
 
-		return postHeight;
+		if (mathed) return _mathPostHeight;
+		else return _mathPostHeight = postHeight;
 	}
 
 	private static bool EditString(ref string text, int maxStringLength, int maxRows, out int finalRows)

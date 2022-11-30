@@ -43,9 +43,20 @@ public class File
 	[JsonPropertyName("install")] public string? Install { get; set; }
 	#endregion Optional
 
-	public byte[] GetFile()
+	private GameOverlay.Drawing.Image? _pathImage;
+	private GameOverlay.Drawing.Image GetFile(GameOverlay.Drawing.Graphics graphics)
 	{
-		throw new NotImplementedException();
+		if (_pathImage is null)
+		{
+			HttpClient client = new();
+			using HttpRequestMessage fileRequest = new(HttpMethod.Get, $"https://2ch.hk{Path}");
+			HttpResponseMessage responce = client.Send(fileRequest);
+			byte[] stream = responce.Content.ReadAsByteArrayAsync().Result;
+
+			_pathImage = new(graphics, stream);
+		}
+
+		return _pathImage;
 	}
 
 	private GameOverlay.Drawing.Image? _thumbImage;
@@ -59,14 +70,17 @@ public class File
 			byte[] stream = responce.Content.ReadAsByteArrayAsync().Result;
 
 			_thumbImage = new(graphics, stream);
+
+			Console.WriteLine(Thumbnail);
+			Console.WriteLine(_thumbImage);
 		}
 
 		return _thumbImage;
 	}
 
-	public void DrawFileThumb(GameOverlay.Drawing.Graphics graphics, int bottom, int left, int width, out int height)
+	public void DrawFile(GameOverlay.Drawing.Graphics graphics, int bottom, int left, int width, out int height)
 	{
-		float coef = TnHeight / ((float)TnWidth);
+		float coef = Height / ((float)Width);
 
 		height = (int)(width * coef);
 
@@ -74,7 +88,39 @@ public class File
 		int top = bottom - height;
 
 		GameOverlay.Drawing.Rectangle rectangle = new(left, top, right, bottom);
-		//GameOverlay.Drawing.Rectangle rectangle = new(400, 300, 600, 100);
+
+		GameOverlay.Drawing.Image image = GetFile(graphics);
+
+		graphics.DrawImage(image, rectangle, 0.5f);
+	}
+
+	#region Premath
+	int? _lastBottom;
+	int? _lastLeft;
+	int? _lastWidth;
+
+	int _mathHeight;
+	GameOverlay.Drawing.Rectangle _mathRectangle;
+	#endregion Premath
+	public void DrawFileThumb(GameOverlay.Drawing.Graphics graphics, int bottom, int left, int width, out int height)
+	{
+		GameOverlay.Drawing.Rectangle rectangle;
+
+		if (_lastBottom == bottom && _lastLeft == left && _lastWidth == width)
+		{
+			rectangle = _mathRectangle;
+			height = _mathHeight;
+		}
+		else
+		{
+			float coef = TnHeight / ((float)TnWidth);
+
+			_mathHeight = height = (int)(width * coef);
+			int right = left + width;
+			int top = bottom - height;
+
+			_mathRectangle = rectangle = new(left, top, right, bottom);
+		}
 
 		GameOverlay.Drawing.Image image = GetFileThumb(graphics);
 
