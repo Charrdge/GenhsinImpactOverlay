@@ -121,11 +121,14 @@ internal class Post
 
 			Point point = new(left + imgWidth + 10, bottom - imgHeight); // h, v
 
+			if (worker.Fonts[FontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+			{
 			graphics.DrawText(
 				worker.Fonts[FontIndex], // Шрифт текста
 				(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
 				point, // Положение текста
 				text); // Текст
+			}
 			#endregion Text
 		}
 		else
@@ -143,11 +146,14 @@ internal class Post
 
 			Point point = new(left, bottom - postHeight); // h, v
 
+			if (worker.Fonts[FontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+			{
 			graphics.DrawText(
 				worker.Fonts[FontIndex], // Шрифт текста
 				(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
 				point, // Положение текста
 				text); // Текст
+			}
 			#endregion Text
 
 			#region Files
@@ -172,15 +178,19 @@ internal class Post
 
 		}
 
+		if (worker.Fonts[BFontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+		{
 		graphics.DrawText(
 			worker.Fonts[BFontIndex], // Шрифт текста
 			(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
 			new(left, bottom - postHeight - row), // Положение текста
 			$"№{Num}"); // Текст
-
+		}
 		postHeight += row;
 
-		graphics.DrawLine((SolidBrush)worker.Brushes[targetPost ? BlackBrushIndex : WhiteBrushIndex], new Line(left - 5, bottom, left - 5, bottom - postHeight), 2f);
+		if (worker.Brushes[targetPost ? BlackBrushIndex : WhiteBrushIndex].IsInitialized)
+		{
+		}
 
 		return postHeight;
 	}

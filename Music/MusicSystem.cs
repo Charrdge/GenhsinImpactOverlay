@@ -62,6 +62,7 @@ internal class MusicSystem
 		if (SoundName is not null)
 		{
 			Point point = new(15, 15);
+			if (Worker.Fonts[FontIndex].IsInitialized && Worker.Brushes[WhiteBrushIndex].IsInitialized)
 			e.Graphics.DrawText(Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], point, SoundName);
 		}
 	}
@@ -198,9 +199,7 @@ internal class MusicSystem
 			Token.GetToken(login, password);
 		}
 
-		//Console.WriteLine(Token.token);
-
-		JsonNode rootNode = JsonNode.Parse(GetJsonFileAsString(fileName));
+		JsonNode rootNode = JsonNode.Parse(GetJsonFileAsString(fileName)) ?? throw new NullReferenceException();
 
 		if (rootNode[yaMusicJsonName] is not null) rootNode[yaMusicJsonName][tokenJsonName] = Token.token;
 		else rootNode[yaMusicJsonName] = new JsonObject 
@@ -220,12 +219,16 @@ internal class MusicSystem
 			{
 				DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
 				{
+					if (Worker.Fonts[FontIndex].IsInitialized &&
+						Worker.Brushes[WhiteBrushIndex].IsInitialized &&
+						Worker.Brushes[BlackBrushIndex].IsInitialized)
+					{
 					e.Graphics.DrawTextWithBackground(
-						Worker.Fonts[FontIndex],
-						Worker.Brushes[WhiteBrushIndex],
-						Worker.Brushes[BlackBrushIndex],
+							Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], Worker.Brushes[BlackBrushIndex],
 						 new Point(50, 100),
 						 $"Write login: {login}");
+					}
+
 				};
 
 				Worker.OnDrawGraphics += onDrawGraphic_LoginEvent;
@@ -241,12 +244,16 @@ internal class MusicSystem
 			{
 				DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
 				{
+					if (Worker.Fonts[FontIndex].IsInitialized && 
+						Worker.Brushes[WhiteBrushIndex].IsInitialized && 
+						Worker.Brushes[BlackBrushIndex].IsInitialized)
+					{
 					e.Graphics.DrawTextWithBackground(
-						Worker.Fonts[FontIndex],
-						Worker.Brushes[WhiteBrushIndex],
-						Worker.Brushes[BlackBrushIndex],
+							Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], Worker.Brushes[BlackBrushIndex],
 						 new Point(50, 100),
 						 $"Write password: {password}");
+					}
+
 				};
 
 				Worker.OnDrawGraphics += onDrawGraphic_LoginEvent;

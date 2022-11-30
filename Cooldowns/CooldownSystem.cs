@@ -74,12 +74,15 @@ internal class CooldownSystem : IDisposable
 			{
 				var key = SwitchCharacterKeys[i];
 
+				if (graphics.Brushes[white].IsInitialized && graphics.Brushes[black].IsInitialized)
+				{ 
 				e.Graphics.DrawTextWithBackground(
 					graphics.Fonts[font], // Шрифт текста
 					(GameOverlay.Drawing.SolidBrush)graphics.Brushes[white], // Цвет текста
 					(GameOverlay.Drawing.SolidBrush)graphics.Brushes[black], // Фон текста
 					h, v + (p * i), // Положение текста
 					timerText(key)); // Текст
+			}
 			}
 		};
 
