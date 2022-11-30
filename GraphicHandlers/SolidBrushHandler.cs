@@ -10,6 +10,8 @@ namespace GenshinImpactOverlay.GraphicWorkers
 		private SolidBrush? Brush { get; set; }
 		Brush IBrush.Brush { get => ((IBrush)Brush).Brush; set => ((IBrush)Brush).Brush = value; }
 
+		public bool IsInitialized => Brush is not null;
+
 		public SolidBrushHandler(Color color) => Color = color;
 
 		public void Create(Graphics gfx) => Brush = gfx.CreateSolidBrush(Color);

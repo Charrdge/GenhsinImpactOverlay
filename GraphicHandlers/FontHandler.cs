@@ -16,6 +16,8 @@ namespace GenshinImpactOverlay.GraphicWorkers
 
 		private Font? Font { get; set; }
 
+		public bool IsInitialized => Font is not null;
+
 		public FontHandler(string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
 		{
 			FontFamilyName = fontFamilyName;
