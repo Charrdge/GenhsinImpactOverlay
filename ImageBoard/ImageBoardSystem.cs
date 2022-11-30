@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Windows.Forms;
 
 namespace GenshinImpactOverlay.ImageBoard;
@@ -11,8 +10,11 @@ internal class ImageBoardSystem : IDisposable
 {
 	public const string SYSNAME = "Imageboard";
 
-	private LinkedList<Post> Posts { get; set; } = new();
 	private GraphicsWorker Worker { get; init; }
+
+	private LinkedList<Post> Posts { get; set; } = new();
+	private List<Post> ShowedPosts { get; set; } = new();
+
 	private System.Timers.Timer GetNewPostsTimer { get; set; } = new(5000);
 
 	private Post? LockedPost { get; set; }
@@ -70,6 +72,7 @@ internal class ImageBoardSystem : IDisposable
 						if (locked) LockedPost = Posts.Last();
 					}
 				}
+				UpdateShowingPosts();
 				break;
 			case Keys.Down:
 				if (eventArgs.System == SYSNAME)
@@ -81,6 +84,7 @@ internal class ImageBoardSystem : IDisposable
 						LockedPost = null;
 					}
 				}
+				UpdateShowingPosts();
 				break;
 			case Keys.Left:
 				if (eventArgs.System == SYSNAME)
@@ -93,12 +97,14 @@ internal class ImageBoardSystem : IDisposable
 					}
 
 				}
+				UpdateShowingPosts();
 				break;
 			case Keys.Right:
 				if (eventArgs.System == SYSNAME)
 				{
 					if (LockedPost is not null && !ExtendFocused) ExtendFocused = true;
 				}	
+				UpdateShowingPosts();
 				break;
 			default:
 				break;
@@ -114,57 +120,7 @@ internal class ImageBoardSystem : IDisposable
 
 		if (Posts.Count == 0) return;
 
-		IEnumerable<Post> showPosts;
-		if (LockedPost is null) showPosts = Posts.TakeLast(5);
-		else
-		{
-			LinkedListNode<Post> TargetPostNode = Posts.FindLast(LockedPost) ?? throw new NullReferenceException();
-
-			List<Post> list = new()
-			{
-				TargetPostNode.Value
-			};
-
-			var prepList = new List<Post>();
-			LinkedListNode<Post>? previous = TargetPostNode.Previous;
-			while(prepList.Count < 4)
-			{
-				if (previous is null) break;
-
-				prepList.Add(previous.Value);
-
-				previous = previous.Previous;
-			}
-
-			var nextList = new List<Post>();
-			LinkedListNode<Post>? next = TargetPostNode.Next;
-			while (nextList.Count < 4)
-			{
-				if (next is null) break;
-
-				nextList.Add(next.Value);
-
-				next = next.Next;
-			}
-
-			int index = 0;
-			while(list.Count < 5)
-			{
-				if (prepList.Count > index)
-				{
-					list.Insert(0, prepList[index]);
-				}
-				if (nextList.Count > index)
-				{
-					list.Add(nextList[index]);
-				}
-				index++;
-			}
-
-			showPosts = list;
-		}
-
-		foreach (Post post in showPosts.Reverse())
+		foreach (Post post in ShowedPosts.Reverse<Post>())
 		{
 			upper += post.DrawPost(e.Graphics, Worker, bottom - upper, left, LockedPost == post, LockedPost == post && ExtendFocused);
 
@@ -174,6 +130,8 @@ internal class ImageBoardSystem : IDisposable
 	
 	private void GetNewPosts(object? sender, System.Timers.ElapsedEventArgs e)
 	{
+		//Console.WriteLine("Get new posts");
+
 		HttpClient httpClient = new();
 		long threadNum = Posts.First().Num;
 		string requestString = $"https://2ch.hk/api/mobile/v2/info/vg/{threadNum}";
@@ -225,10 +183,16 @@ internal class ImageBoardSystem : IDisposable
 				}
 			}
 		}
+
+		//Console.WriteLine("New posts was get");
+
+		UpdateShowingPosts();
 	}
 
 	private static JsonDocument GetThread(HttpClient httpClient)
 	{
+		//Console.WriteLine("getting thread");
+
 		using (HttpRequestMessage threadsRequest = new(HttpMethod.Get, "https://2ch.hk/vg/catalog_num.json"))
 		{
 			var responce = httpClient.Send(threadsRequest);
@@ -243,6 +207,7 @@ internal class ImageBoardSystem : IDisposable
 				{
 					if (thread.TryGetProperty("tags", out JsonElement tag) && tag.GetString() == "genshin")
 					{
+						//Console.WriteLine("Thread was get");
 						return JsonDocument.Parse(thread.ToString());
 					}
 				}
@@ -250,11 +215,12 @@ internal class ImageBoardSystem : IDisposable
 				throw new Exception();
 			}
 		}
-
 	}
 
 	private void GetAllPosts(HttpClient httpClient, JsonDocument thread)
 	{
+		//Console.WriteLine("Get all thread post");
+
 		Posts = new();
 
 		long threadNum = thread.RootElement.GetProperty("num").GetInt64();
@@ -282,8 +248,68 @@ internal class ImageBoardSystem : IDisposable
 				}
 			}
 		}
+
+		//Console.WriteLine("All thread posts getted");
+
+		UpdateShowingPosts();
 	}
 	
+	private void UpdateShowingPosts()
+	{
+		//Console.WriteLine("Update showing posts");
+
+		if (LockedPost is null) ShowedPosts = new(Posts.TakeLast(5));
+		else
+		{
+			LinkedListNode<Post> TargetPostNode = Posts.FindLast(LockedPost) ?? throw new NullReferenceException();
+
+			List<Post> list = new()
+			{
+				TargetPostNode.Value
+			};
+
+			var prepList = new List<Post>();
+			LinkedListNode<Post>? previous = TargetPostNode.Previous;
+			while (prepList.Count < 4)
+			{
+				if (previous is null) break;
+
+				prepList.Add(previous.Value);
+
+				previous = previous.Previous;
+			}
+
+			var nextList = new List<Post>();
+			LinkedListNode<Post>? next = TargetPostNode.Next;
+			while (nextList.Count < 4)
+			{
+				if (next is null) break;
+
+				nextList.Add(next.Value);
+
+				next = next.Next;
+			}
+
+			int index = 0;
+			while (list.Count < 5)
+			{
+				if (prepList.Count > index)
+				{
+					list.Insert(0, prepList[index]);
+				}
+				if (nextList.Count > index)
+				{
+					list.Add(nextList[index]);
+				}
+				index++;
+			}
+
+			ShowedPosts = new(list);
+		}
+
+		//Console.WriteLine("Showing posts was updated");
+	}
+
 	~ImageBoardSystem() => Dispose(disposing: false);
 
 	#region IDisposable
