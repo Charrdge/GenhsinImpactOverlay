@@ -12,7 +12,7 @@ namespace GenshinImpactOverlay.Music;
 
 internal class MusicSystem
 {
-	private const string SYSNAME = "Music";
+	public const string SYSNAME = "Music";
 
 	private GraphicsWorker Worker { get; init; }
 

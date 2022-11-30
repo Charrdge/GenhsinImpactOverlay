@@ -9,7 +9,7 @@ namespace GenshinImpactOverlay.ImageBoard;
 /// </summary>
 internal class ImageBoardSystem : IDisposable
 {
-	private const string SYSNAME = "Imageboard";
+	public const string SYSNAME = "Imageboard";
 
 	private LinkedList<Post> Posts { get; set; } = new();
 	private GraphicsWorker Worker { get; init; }

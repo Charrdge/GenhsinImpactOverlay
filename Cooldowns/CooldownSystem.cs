@@ -7,7 +7,7 @@ namespace GenshinImpactOverlay.Cooldowns;
 /// </summary>
 internal class CooldownSystem : IDisposable
 {
-	private const string SYSNAME = "Cooldown";
+	public const string SYSNAME = "Cooldown";
 
 	/// <summary>
 	/// Хранит время с последнего нажатия навыка каждого персонажа
