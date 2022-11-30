@@ -122,18 +122,18 @@ internal class Starter
 			else text = "Running imageboard posting";
 		}
 		else GraphicsWorker.OnDrawGraphics -= GraphicsWorker_OnDrawGraphics;
-
+		
 		if (GraphicsWorker.Fonts[FontIndex].IsInitialized &&
 			GraphicsWorker.Brushes[WhiteBrushIndex].IsInitialized &&
 			GraphicsWorker.Brushes[BlackBrushIndex].IsInitialized)
 		{
-		graphics.DrawTextWithBackground(
-			GraphicsWorker.Fonts[FontIndex],
-			GraphicsWorker.Brushes[WhiteBrushIndex],
-			GraphicsWorker.Brushes[BlackBrushIndex],
-			 new Point(50, 50),
-			 text);
-	}
+			graphics.DrawTextWithBackground(
+				GraphicsWorker.Fonts[FontIndex],
+				GraphicsWorker.Brushes[WhiteBrushIndex],
+				GraphicsWorker.Brushes[BlackBrushIndex],
+				 new Point(50, 50),
+				 text);
+		}
 
 	}
 }

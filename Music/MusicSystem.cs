@@ -63,7 +63,7 @@ internal class MusicSystem
 		{
 			Point point = new(15, 15);
 			if (Worker.Fonts[FontIndex].IsInitialized && Worker.Brushes[WhiteBrushIndex].IsInitialized)
-			e.Graphics.DrawText(Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], point, SoundName);
+				e.Graphics.DrawText(Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], point, SoundName);
 		}
 	}
 
@@ -187,7 +187,6 @@ internal class MusicSystem
 		string tokenJsonName = "token";
 
 		JsonElement rootElement = JsonDocument.Parse(GetJsonFileAsString(fileName)).RootElement;
-		//Console.WriteLine(rootElement);
 		if (rootElement.TryGetProperty(yaMusicJsonName, out JsonElement yaMusicJson) && yaMusicJson.TryGetProperty(tokenJsonName, out JsonElement tokenJson))
 		{
 			Token.token = tokenJson.GetString();
@@ -206,7 +205,6 @@ internal class MusicSystem
 		{
 			[tokenJsonName] = Token.token
 		};
-		//Console.WriteLine(rootNode);
 		using StreamWriter streamWriter = new(fileName);
 		streamWriter.Write(rootNode.ToString());
 
@@ -223,10 +221,10 @@ internal class MusicSystem
 						Worker.Brushes[WhiteBrushIndex].IsInitialized &&
 						Worker.Brushes[BlackBrushIndex].IsInitialized)
 					{
-					e.Graphics.DrawTextWithBackground(
+						e.Graphics.DrawTextWithBackground(
 							Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], Worker.Brushes[BlackBrushIndex],
-						 new Point(50, 100),
-						 $"Write login: {login}");
+							new Point(50, 100),
+							$"Write login: {login}");
 					}
 
 				};
@@ -248,10 +246,10 @@ internal class MusicSystem
 						Worker.Brushes[WhiteBrushIndex].IsInitialized && 
 						Worker.Brushes[BlackBrushIndex].IsInitialized)
 					{
-					e.Graphics.DrawTextWithBackground(
+						e.Graphics.DrawTextWithBackground(
 							Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], Worker.Brushes[BlackBrushIndex],
-						 new Point(50, 100),
-						 $"Write password: {password}");
+							 new Point(50, 100),
+							 $"Write password: {password}");
 					}
 
 				};

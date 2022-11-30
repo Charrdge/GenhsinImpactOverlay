@@ -9,7 +9,7 @@ using System.Windows.Forms;
 /// </summary>
 internal class GraphicsWorker : IDisposable
 {
-	private const string SYSNAME = "Graphic";
+	public const string SYSNAME = "Graphic";
 
 	/// <summary>
 	/// Объект через который происходит генерация графики
@@ -103,10 +103,8 @@ internal class GraphicsWorker : IDisposable
 	public string AddFont(string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
 	{
 		string name = GenerateName(fontFamilyName, size, bold, italic, wordWrapping);
-
+		
 		if (Fonts.ContainsKey(name)) return name;
-		bool removed = Fonts.Remove(name, out FontHandler? oldValue);
-		if (removed && oldValue is not null) oldValue.Dispose();
 
 		bool added = Fonts.TryAdd(name, new FontHandler(fontFamilyName, size, bold, italic, wordWrapping));
 		if (!added) throw new ArgumentException("Fonts not added");
@@ -136,8 +134,6 @@ internal class GraphicsWorker : IDisposable
 		string name = GenerateName(color);
 
 		if (Brushes.ContainsKey(name)) return name;
-		bool removed = Brushes.Remove(name, out SolidBrushHandler? oldValue);
-		if (removed && oldValue is not null) oldValue.Dispose();
 
 		bool added = Brushes.TryAdd(name, new SolidBrushHandler(color));
 		if (!added) throw new ArgumentException("Solid Brush not added", nameof(color));
@@ -168,8 +164,6 @@ internal class GraphicsWorker : IDisposable
 
 		foreach (var pair in Brushes) pair.Value.Create(gfx);
 		foreach (var pair in Fonts) pair.Value.Create(gfx);
-
-		if (e.RecreateResources) return;
 	}
 
 	/// <summary>
