@@ -7,10 +7,11 @@ using GameOverlay.Drawing;
 using System.Text.Json.Nodes;
 using GenshinImpactOverlay.EventsArgs;
 using static GraphicsWorker;
+using GenshinImpactOverlay.Menus;
 
 namespace GenshinImpactOverlay.Music;
 
-internal class MusicSystem
+internal class MusicSystem : IUseMenu
 {
 	public const string SYSNAME = "Music";
 
@@ -23,6 +24,16 @@ internal class MusicSystem
 
 	private string? SoundName { get; set; }
 	private string? PlayTrackId { get; set; }
+	private decimal _volume = 0.5m;
+	private decimal Volume
+	{
+		get => _volume;
+		set
+		{
+			_volume = value;
+			UpdatePlayerVolume(_volume);
+		}
+	}
 
 	#region Resources
 	private string FontIndex { get; init; }
@@ -70,11 +81,6 @@ internal class MusicSystem
 	private void ButtonHook_OnKeyDown(object? _, OnKeyUpEventArgs eventArgs)
 	{
 		if (eventArgs.InputPriority > InputPriorityEnum.Normal && eventArgs.System != SYSNAME) return;
-
-		Keys key = eventArgs.Key;
-		if (key == Keys.NumPad6) PlayNextStationTrack();
-		else if (key == Keys.NumPad5) SwitchTrackPause();
-		else if (key == Keys.NumPad4) PlayPrevStationTrack();
 	}
 	
 	private void SwitchTrackPause()
@@ -149,6 +155,7 @@ internal class MusicSystem
 		};
 		Player.Init(Mf);
 		Player.Play();
+		UpdatePlayerVolume(Volume);
 	}
 
 	private void UpdateStationTracksQueue(string stationId)
@@ -272,4 +279,40 @@ internal class MusicSystem
 			return file;
 		}
 	}
+
+	private void UpdatePlayerVolume(decimal vol)
+	{
+		if (Player is not null && Player.AudioStreamVolume.ChannelCount > 0)
+		{
+			for (int index = 0; index < Player.AudioStreamVolume.ChannelCount; index++)
+			{
+				Player.AudioStreamVolume.SetChannelVolume(index, Convert.ToSingle(vol));
+			}
+		}
+	}
+
+	#region IUseMenu
+	private MenuItem? _menuItem;
+	MenuItem? IUseMenu.GetMenu(Action<MenuItem> updateMenuFunc, Action<bool?> keyInputSwitchFunc)
+	{
+		const string PATH = "Resources/Icons";
+
+		if (_menuItem is null)
+		{
+			Dictionary<Keys, Action> actions = new()
+			{
+				{ Keys.Return, () => keyInputSwitchFunc(null) },
+				{ Keys.Up, () => { if (Volume < 1m) Volume += 0.1m; } },
+				{ Keys.Down, () => { if (Volume > 0m) Volume -= 0.1m; } },
+				{ Keys.Clear, () => SwitchTrackPause() },
+				{ Keys.Left, () => PlayPrevStationTrack() },
+				{ Keys.Right, () => PlayNextStationTrack() },
+			};
+
+			_menuItem = new(SYSNAME, $"{PATH}/headphones.png", actions);
+		}
+
+		return _menuItem;
+	}
+	#endregion IUseMenu
 }
