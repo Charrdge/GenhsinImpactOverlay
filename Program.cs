@@ -57,29 +57,8 @@ InputHook.OnKeyUp += (_, eventArgs) =>
 GameOverlay.TimerService.EnableHighPrecisionTimers();
 using (GraphicsWorker graphicsWorker = new(handleWindow))
 {
-	_ = new GenshinImpactOverlay.Starter(graphicsWorker);
-
-	//Console.WriteLine("Run cooldown system? (y - yes)");
-	//if (Console.ReadLine() == "y")
-	//{
-	//	var keys = new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 };
-	//	GenshinImpactOverlay.Cooldowns.CooldownSystem cooldownSystem = new(graphicsWorker, keys, new TimeSpan(0, 1, 30));
-	//	Console.WriteLine("Cooldown system is running");
-	//}
-
-	//Console.WriteLine("Run music system? (y - yes)");
-	//if (Console.ReadLine() == "y")
-	//{
-	//	GenshinImpactOverlay.Music.MusicSystem system = new(graphicsWorker);
-	//	Console.WriteLine("Music system is running");
-	//}
-
-	//Console.WriteLine("Run chan system? (y - yes)");
-	//if (Console.ReadLine() == "y")
-	//{
-	//	GenshinImpactOverlay.ImageBoard.ImageBoardSystem chanSystem = new(graphicsWorker);
-	//	Console.WriteLine("Imageboard system is running");
-	//}
+	var menu = new GenshinImpactOverlay.Menus.Menu(graphicsWorker);
+	_ = new GenshinImpactOverlay.Starter(graphicsWorker, menu);
 
 	graphicsWorker.Run();
 }

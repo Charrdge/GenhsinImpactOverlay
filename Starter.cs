@@ -1,8 +1,7 @@
 ﻿using System.Windows.Forms;
-
 using GameOverlay.Drawing;
-
 using GenshinImpactOverlay.EventsArgs;
+using GenshinImpactOverlay.Menus;
 
 namespace GenshinImpactOverlay;
 
@@ -11,6 +10,8 @@ internal class Starter
 	private const string SYSNAME = "Starter";
 
 	GraphicsWorker GraphicsWorker { get; }
+
+	Menu Menu { get; }
 
 	#region Resources
 	private string FontIndex { get; init; }
@@ -24,9 +25,10 @@ internal class Starter
 
 	Task? InitSystemTask { get; set; }
 
-	public Starter(GraphicsWorker graphicsWorker)
+	public Starter(GraphicsWorker graphicsWorker, Menu menu)
 	{
 		GraphicsWorker = graphicsWorker;
+		Menu = menu;
 
 		FontIndex = graphicsWorker.AddFont("Consolas", 14);
 		WhiteBrushIndex = graphicsWorker.AddSolidBrush(new Color(255, 255, 255));
@@ -53,10 +55,11 @@ internal class Starter
 				{
 					InitSystemTask = new Task(() =>
 					{
-						_ = new Music.MusicSystem(GraphicsWorker);
+						Music.MusicSystem system = new(GraphicsWorker);
 
 						MusicSystem = true;
 						InitSystemTask = null;
+						Menu.TryAddSystem(system);
 					});
 					InitSystemTask.Start();
 				}
@@ -65,10 +68,11 @@ internal class Starter
 					InitSystemTask = new Task(() =>
 					{
 						var keys = new Keys[] { Keys.D1, Keys.D2, Keys.D3, Keys.D4 };
-						_ = new Cooldowns.CooldownSystem(GraphicsWorker, keys, new TimeSpan(0, 1, 30));
+						var system = new Cooldowns.CooldownSystem(GraphicsWorker, keys, new TimeSpan(0, 1, 30));
 
 						CooldownSystem = true;
 						InitSystemTask = null;
+						//Menu.TryAddSystem(system);
 					});
 					InitSystemTask.Start();
 				}
@@ -76,10 +80,12 @@ internal class Starter
 				{
 					InitSystemTask = new Task(() =>
 					{
-						_ = new ImageBoard.ImageBoardSystem(GraphicsWorker);
+						ImageBoard.ImageBoardSystem system = new(GraphicsWorker);
 
 						ImageBoardSystem = true;
 						InitSystemTask = null;
+
+						Menu.TryAddSystem(system);
 					});
 					InitSystemTask.Start();
 				}
