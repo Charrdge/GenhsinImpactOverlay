@@ -100,7 +100,7 @@ internal class Post
 	#endregion premath
 
 	private static object _locked = new();
-	public int DrawPost(Graphics graphics, GraphicsWorker worker, int bottom, int left, bool targetPost = false, bool extendPost = false)
+	public int DrawPost(GraphicsWorker worker, Graphics graphics, float imgOpacity, int bottom, int left, bool targetPost = false, bool extendPost = false)
 	{
 		#region Nums
 		int row = 17;
@@ -118,7 +118,7 @@ internal class Post
 			#region Files
 			File file = Files[0];
 
-			file.DrawFileThumb(graphics, bottom, left, imgWidth, out int imgHeight);
+			file.DrawFileThumb(graphics, imgOpacity, bottom, left, imgWidth, out int imgHeight);
 			#endregion Files
 
 			#region Text
@@ -207,7 +207,7 @@ internal class Post
 
 					int leftImg = mathed ? _mathImgLeft : bottom - postHeight;
 
-					file.DrawFileThumb(graphics, leftImg, left + ((imgWidth + 5) * index), imgWidth, out int height);
+					file.DrawFileThumb(graphics, imgOpacity, leftImg, left + ((imgWidth + 5) * index), imgWidth, out int height);
 
 					if (height > maxImageHeight) maxImageHeight = height;
 				}

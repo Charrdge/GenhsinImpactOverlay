@@ -1,12 +1,13 @@
 ﻿using System.Text.Json;
 using System.Windows.Forms;
+using GenshinImpactOverlay.Menus;
 
 namespace GenshinImpactOverlay.ImageBoard;
 
 /// <summary>
 /// Система отображения постов из Aib
 /// </summary>
-internal class ImageBoardSystem : IDisposable
+internal class ImageBoardSystem : IUseMenu
 {
 	public const string SYSNAME = "Imageboard";
 
@@ -19,8 +20,9 @@ internal class ImageBoardSystem : IDisposable
 
 	private Post? LockedPost { get; set; }
 
-	private bool NodeMode { get; set; } = false;
+	//private bool NodeMode { get; set; } = false;
 	private bool ExtendFocused { get; set; } = false;
+	private float Opacity { get; set; } = 0.5f;
 
 	public ImageBoardSystem(GraphicsWorker worker)
 	{
@@ -34,7 +36,7 @@ internal class ImageBoardSystem : IDisposable
 
 		HttpClient httpClient = new();
 
-		JsonDocument thread = GetThread(httpClient);
+		JsonDocument thread = GetThreadsByTag(httpClient);
 
 		GetAllPosts(httpClient, thread);
 
@@ -48,68 +50,7 @@ internal class ImageBoardSystem : IDisposable
 		InputHook.OnKeyUp += InputHook_OnKeyUp;
 	}
 
-	private void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs)
-	{
-		if (eventArgs.InputPriority >= InputPriorityEnum.Locked && eventArgs.System != SYSNAME) return;
-
-		Keys key = eventArgs.Key;
-
-		switch (key)
-		{
-			case Keys.Up:
-				if (eventArgs.System == SYSNAME)
-				{
-					if (LockedPost != Posts.First())
-					{
-						LockedPost = Posts.FindLast(LockedPost).Previous.Value;
-					}
-				}
-				else
-				{
-					if (LockedPost is null)
-					{
-						bool locked = InputHook.TrySetSystemLock(SYSNAME);
-						if (locked) LockedPost = Posts.Last();
-					}
-				}
-				UpdateShowingPosts();
-				break;
-			case Keys.Down:
-				if (eventArgs.System == SYSNAME)
-				{
-					if (LockedPost is not null && LockedPost != Posts.Last()) LockedPost = Posts.FindLast(LockedPost).Next.Value;
-					else
-					{
-						InputHook.TryClearSystemLock(SYSNAME);
-						LockedPost = null;
-					}
-				}
-				UpdateShowingPosts();
-				break;
-			case Keys.Left:
-				if (eventArgs.System == SYSNAME)
-				{
-					if (ExtendFocused) ExtendFocused = false;
-					else
-					{
-						InputHook.TryClearSystemLock(SYSNAME);
-						LockedPost = null;
-					}
-
-				}
-				UpdateShowingPosts();
-				break;
-			case Keys.Right:
-				if (eventArgs.System == SYSNAME)
-				{
-					if (LockedPost is not null && !ExtendFocused) ExtendFocused = true;
-				}	
-				UpdateShowingPosts();
-				break;
-			default:
-				break;
-		}
-	}
+	private void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs) { }
 
 	private void Graphics_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e) 
 	{
@@ -122,7 +63,7 @@ internal class ImageBoardSystem : IDisposable
 
 		foreach (Post post in ShowedPosts.Reverse<Post>())
 		{
-			upper += post.DrawPost(e.Graphics, Worker, bottom - upper, left, LockedPost == post, LockedPost == post && ExtendFocused);
+			upper += post.DrawPost(Worker, e.Graphics, Opacity, bottom - upper, left, LockedPost == post, LockedPost == post && ExtendFocused);
 
 			upper += escape; //небольшой отступ между постами
 		}
@@ -148,7 +89,7 @@ internal class ImageBoardSystem : IDisposable
 
 				if (posts.TryGetInt32(out int postCount) && postCount > 999)
 				{
-					JsonDocument thread = GetThread(httpClient);
+					JsonDocument thread = GetThreadsByTag(httpClient);
 
 					int num = thread.RootElement.GetProperty("num").GetInt32();
 
@@ -189,7 +130,7 @@ internal class ImageBoardSystem : IDisposable
 		UpdateShowingPosts();
 	}
 
-	private static JsonDocument GetThread(HttpClient httpClient)
+	private static JsonDocument GetThreadsByTag(HttpClient httpClient, string tag = "genshin")
 	{
 		//Console.WriteLine("getting thread");
 
@@ -205,7 +146,7 @@ internal class ImageBoardSystem : IDisposable
 
 				foreach (JsonElement thread in threads.EnumerateArray())
 				{
-					if (thread.TryGetProperty("tags", out JsonElement tag) && tag.GetString() == "genshin")
+					if (thread.TryGetProperty("tags", out JsonElement tagJson) && tagJson.GetString() == tag)
 					{
 						//Console.WriteLine("Thread was get");
 						return JsonDocument.Parse(thread.ToString());
@@ -310,35 +251,82 @@ internal class ImageBoardSystem : IDisposable
 		//Console.WriteLine("Showing posts was updated");
 	}
 
-	~ImageBoardSystem() => Dispose(disposing: false);
-
-	#region IDisposable
-	private bool _disposedValue;
-
-	protected virtual void Dispose(bool disposing)
+	#region IUseMenu
+	private MenuItem? _menuItem;
+	MenuItem? IUseMenu.GetMenu(Action<MenuItem> updateMenuFunc, Action<bool?> keyInputSwitchFunc)
 	{
-		if (!_disposedValue)
+		const string PATH = "Resources/Icons";
+
+		if (_menuItem is null)
 		{
-			if (disposing)
+			_menuItem = new(SYSNAME, $"{PATH}/conversation.png", childMenus: new()
 			{
-				// TODO: освободить управляемое состояние (управляемые объекты)
-			}
-
-
-
-			// TODO: освободить неуправляемые ресурсы (неуправляемые объекты) и переопределить метод завершения
-			// TODO: установить значение NULL для больших полей
-			_disposedValue = true;
+				GetSettingsMenu(),
+				GetSurfMenu(),
+			});
 		}
-	}
 
-	// // TODO: переопределить метод завершения, только если "Dispose(bool disposing)" содержит код для освобождения неуправляемых ресурсов
+		return _menuItem;
 
+		MenuItem GetSettingsMenu()
+		{
+			const string SETNAME = "settings";
 
-	void IDisposable.Dispose()
-	{
-		Dispose(disposing: true);
-		GC.SuppressFinalize(this);
+			List<MenuItem> childs = new()
+			{
+				new($"{SYSNAME}_{SETNAME}_{nameof(ExtendFocused)}", $"{PATH}/magnifying-glass.png", new() { 
+					{ Keys.Clear, () => ExtendFocused = !ExtendFocused } 
+				}),
+				new($"{SYSNAME}_{SETNAME}_{nameof(Opacity)}", $"{PATH}/headphones.png", new() { 
+					{ Keys.Clear, () => keyInputSwitchFunc(null) },
+					{ Keys.Left, () => { if (Opacity > 0f) Opacity -= 0.1f; } },
+					{ Keys.Right, () => { if (Opacity < 1f) Opacity += 0.1f; } }
+				}),
+			};
+
+			return new($"{SYSNAME}_{SETNAME}", $"{PATH}/pause-button.png", childMenus: childs);
+		}
+	
+		MenuItem GetSurfMenu()
+		{
+			const string SETNAME = "surf";
+
+			return new($"{SYSNAME}_{SETNAME}", $"{PATH}/mesh-network.png", new()
+			{
+				{ Keys.Clear, () => { 
+					if (LockedPost is null)
+					{
+						keyInputSwitchFunc(true);
+						LockedPost = Posts.Last();
+					}
+					else
+					{
+						LockedPost = null;
+						keyInputSwitchFunc(false);
+					}
+
+					UpdateShowingPosts();
+				} },
+				{ Keys.Up, () => {
+					keyInputSwitchFunc(true);
+					if (LockedPost is null) LockedPost = Posts.Last();
+					else if (LockedPost != Posts.First()) LockedPost = Posts.FindLast(LockedPost).Previous.Value;
+					else return;
+
+					UpdateShowingPosts();
+				} },
+				{ Keys.Down, () => {
+					if (LockedPost is null) return;
+					else  if (LockedPost != Posts.Last()) LockedPost = Posts.FindLast(LockedPost).Next.Value;
+					else
+					{
+						LockedPost = null;
+						keyInputSwitchFunc(false);
+					}
+					UpdateShowingPosts();
+				} },
+			});
+		}
 	}
 	#endregion
 }

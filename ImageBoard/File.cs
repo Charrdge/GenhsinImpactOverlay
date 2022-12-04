@@ -102,7 +102,7 @@ public class File
 	int _mathHeight;
 	GameOverlay.Drawing.Rectangle _mathRectangle;
 	#endregion Premath
-	public void DrawFileThumb(GameOverlay.Drawing.Graphics graphics, int bottom, int left, int width, out int height)
+	public void DrawFileThumb(GameOverlay.Drawing.Graphics graphics, float opacity, int bottom, int left, int width, out int height)
 	{
 		GameOverlay.Drawing.Rectangle rectangle;
 
@@ -124,6 +124,6 @@ public class File
 
 		GameOverlay.Drawing.Image image = GetFileThumb(graphics);
 
-		graphics.DrawImage(image, rectangle, 0.5f);
+		graphics.DrawImage(image, rectangle, opacity);
 	}
 }
