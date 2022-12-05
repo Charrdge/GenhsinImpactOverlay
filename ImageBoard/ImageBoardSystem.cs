@@ -9,19 +9,45 @@ namespace GenshinImpactOverlay.ImageBoard;
 /// </summary>
 internal class ImageBoardSystem : IUseMenu
 {
-	public const string SYSNAME = "Imageboard";
+	/// <summary>
+	/// Название системы для генерации названий
+	/// </summary>
+	public string Sysname => nameof(ImageBoardSystem);
 
+	/// <summary>
+	/// Обработчик графики
+	/// </summary>
 	private GraphicsWorker Worker { get; init; }
 
-	private LinkedList<Post> Posts { get; set; } = new();
+	/// <summary>
+	/// Все посты треда
+	/// </summary>
+	private LinkedList<Post> Posts { get; } = new();
+	/// <summary>
+	/// Посты для отображения
+	/// </summary>
 	private List<Post> ShowedPosts { get; set; } = new();
 
+	/// <summary>
+	/// Частота обновления постов
+	/// </summary>
 	private System.Timers.Timer GetNewPostsTimer { get; set; } = new(5000);
 
-	private Post? LockedPost { get; set; }
-
-	//private bool NodeMode { get; set; } = false;
-	private bool ExtendFocused { get; set; } = false;
+	/// <summary>
+	/// Выбранный пост
+	/// </summary>
+	private Post? FocusPost { get; set; }
+	/// <summary>
+	/// Разворот поста на котором фокус
+	/// </summary>
+	private bool ExtendFocused { get; set; } = true;
+	/// <summary>
+	/// Режим веток
+	/// </summary>
+	private bool NodeMode { get; set; } = false;
+	/// <summary>
+	/// Прозрачность изображений на постах
+	/// </summary>
 	private float Opacity { get; set; } = 0.5f;
 
 	public ImageBoardSystem(GraphicsWorker worker)
@@ -50,7 +76,10 @@ internal class ImageBoardSystem : IUseMenu
 		InputHook.OnKeyUp += InputHook_OnKeyUp;
 	}
 
-	private void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs) { }
+	private void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs)
+	{
+
+	}
 
 	private void Graphics_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e) 
 	{
@@ -63,7 +92,7 @@ internal class ImageBoardSystem : IUseMenu
 
 		foreach (Post post in ShowedPosts.Reverse<Post>())
 		{
-			upper += post.DrawPost(Worker, e.Graphics, Opacity, bottom - upper, left, LockedPost == post, LockedPost == post && ExtendFocused);
+			upper += post.DrawPost(Worker, e.Graphics, Opacity, bottom - upper, left, FocusPost == post, FocusPost == post && ExtendFocused);
 
 			upper += escape; //небольшой отступ между постами
 		}
@@ -71,61 +100,60 @@ internal class ImageBoardSystem : IUseMenu
 	
 	private void GetNewPosts(object? sender, System.Timers.ElapsedEventArgs e)
 	{
-		//Console.WriteLine("Get new posts");
-
 		HttpClient httpClient = new();
 		long threadNum = Posts.First().Num;
 		string requestString = $"https://2ch.hk/api/mobile/v2/info/vg/{threadNum}";
 
+		#region Check new thread
 		using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
 		{
 			var response = httpClient.Send(postsRequest);
 			string strJson = response.Content.ReadAsStringAsync().Result;
 
-			using (JsonDocument document = JsonDocument.Parse(strJson))
+			using JsonDocument document = JsonDocument.Parse(strJson);
+			JsonElement root = document.RootElement;
+			JsonElement posts = root.GetProperty("thread").GetProperty("posts");
+
+			if (posts.TryGetInt32(out int postCount) && postCount > 999)
 			{
-				JsonElement root = document.RootElement;
-				JsonElement posts = root.GetProperty("thread").GetProperty("posts");
+				JsonDocument thread = GetThreadsByTag(httpClient);
 
-				if (posts.TryGetInt32(out int postCount) && postCount > 999)
-				{
-					JsonDocument thread = GetThreadsByTag(httpClient);
+				int num = thread.RootElement.GetProperty("num").GetInt32();
 
-					int num = thread.RootElement.GetProperty("num").GetInt32();
-
-					if (!Posts.Any((arg) => arg.Num == num)) GetAllPosts(httpClient, thread);
-				}
+				if (!Posts.Any((arg) => arg.Num == num)) GetAllPosts(httpClient, thread);
 			}
 		}
+		#endregion Check new thread
 
 		int postNum = Posts.Last().Num;
 
 		requestString = $"https://2ch.hk/api/mobile/v2/after/vg/{threadNum}/{postNum}";
 
+		#region Check new posts in thread
+
 		using (HttpRequestMessage postsRequest = new(HttpMethod.Get, requestString))
 		{
 			var response = httpClient.Send(postsRequest);
 			string strJson = response.Content.ReadAsStringAsync().Result;
 
-			using (JsonDocument document = JsonDocument.Parse(strJson))
+			using JsonDocument document = JsonDocument.Parse(strJson);
+			JsonElement root = document.RootElement;
+			JsonElement posts = root.GetProperty("posts");
+			foreach (JsonElement json in posts.EnumerateArray())
 			{
-				JsonElement root = document.RootElement;
-				JsonElement posts = root.GetProperty("posts");
-				foreach (JsonElement json in posts.EnumerateArray())
+				Post? post = JsonSerializer.Deserialize<Post>(JsonDocument.Parse(json.ToString()));
+
+				if (post is null) throw new Exception();
+
+				if (!Posts.Any((arg) => arg.Num == post.Num))
 				{
-					Post? post = JsonSerializer.Deserialize<Post>(JsonDocument.Parse(json.ToString()));
-
-					if (post is null) throw new Exception();
-
-					if (!Posts.Any((arg) => arg.Num == post.Num))
-					{
-						Posts.AddLast(post);
-					}
+					Posts.AddLast(post);
+					SyncPostLinks(post);
 				}
 			}
 		}
 
-		//Console.WriteLine("New posts was get");
+		#endregion Check new posts in thread
 
 		UpdateShowingPosts();
 	}
@@ -162,7 +190,7 @@ internal class ImageBoardSystem : IUseMenu
 	{
 		//Console.WriteLine("Get all thread post");
 
-		Posts = new();
+		Posts.Clear();
 
 		long threadNum = thread.RootElement.GetProperty("num").GetInt64();
 
@@ -186,23 +214,41 @@ internal class ImageBoardSystem : IUseMenu
 					if (post is null) throw new Exception();
 
 					Posts.AddLast(post);
+					SyncPostLinks(post);
 				}
 			}
 		}
 
-		//Console.WriteLine("All thread posts getted");
-
 		UpdateShowingPosts();
 	}
-	
+
+	private void SyncPostLinks(Post? post)
+	{
+		List<int> links = post.GetPostLinks().ToList();
+
+		if (links.Count > 0)
+		{
+			foreach (var item in Posts)
+			{
+				if (!links.Any()) break;
+				if (item is null) continue;
+
+				if (links.Contains(item.Num))
+				{
+					//Console.Write($"{item.Num} ");
+					item.AddReference(post.Num);
+					_ = links.Remove(item.Num);
+				}
+			}
+		}
+	}
+
 	private void UpdateShowingPosts()
 	{
-		//Console.WriteLine("Update showing posts");
-
-		if (LockedPost is null) ShowedPosts = new(Posts.TakeLast(5));
-		else
+		if (FocusPost is null) ShowedPosts = new(Posts.TakeLast(5));
+		else if (!NodeMode)
 		{
-			LinkedListNode<Post> TargetPostNode = Posts.FindLast(LockedPost) ?? throw new NullReferenceException();
+			LinkedListNode<Post> TargetPostNode = Posts.FindLast(FocusPost) ?? throw new NullReferenceException();
 
 			List<Post> list = new()
 			{
@@ -247,8 +293,10 @@ internal class ImageBoardSystem : IUseMenu
 
 			ShowedPosts = new(list);
 		}
+		else
+		{
 
-		//Console.WriteLine("Showing posts was updated");
+		}
 	}
 
 	#region IUseMenu
@@ -257,14 +305,11 @@ internal class ImageBoardSystem : IUseMenu
 	{
 		const string PATH = "Resources/Icons";
 
-		if (_menuItem is null)
+		_menuItem ??= new(Sysname, $"{PATH}/conversation.png", childMenus: new()
 		{
-			_menuItem = new(SYSNAME, $"{PATH}/conversation.png", childMenus: new()
-			{
-				GetSettingsMenu(),
-				GetSurfMenu(),
-			});
-		}
+			GetSettingsMenu(),
+			GetSurfMenu(),
+		});
 
 		return _menuItem;
 
@@ -274,34 +319,34 @@ internal class ImageBoardSystem : IUseMenu
 
 			List<MenuItem> childs = new()
 			{
-				new($"{SYSNAME}_{SETNAME}_{nameof(ExtendFocused)}", $"{PATH}/magnifying-glass.png", new() { 
+				new($"{Sysname}_{SETNAME}_{nameof(ExtendFocused)}", $"{PATH}/magnifying-glass.png", new() { 
 					{ Keys.Clear, () => ExtendFocused = !ExtendFocused } 
 				}),
-				new($"{SYSNAME}_{SETNAME}_{nameof(Opacity)}", $"{PATH}/headphones.png", new() { 
+				new($"{Sysname}_{SETNAME}_{nameof(Opacity)}", $"{PATH}/headphones.png", new() { 
 					{ Keys.Clear, () => keyInputSwitchFunc(null) },
 					{ Keys.Left, () => { if (Opacity > 0f) Opacity -= 0.1f; } },
 					{ Keys.Right, () => { if (Opacity < 1f) Opacity += 0.1f; } }
 				}),
 			};
 
-			return new($"{SYSNAME}_{SETNAME}", $"{PATH}/pause-button.png", childMenus: childs);
+			return new($"{Sysname}_{SETNAME}", $"{PATH}/pause-button.png", childMenus: childs);
 		}
 	
 		MenuItem GetSurfMenu()
 		{
 			const string SETNAME = "surf";
 
-			return new($"{SYSNAME}_{SETNAME}", $"{PATH}/mesh-network.png", new()
+			return new($"{Sysname}_{SETNAME}", $"{PATH}/mesh-network.png", new()
 			{
 				{ Keys.Clear, () => { 
-					if (LockedPost is null)
+					if (FocusPost is null)
 					{
 						keyInputSwitchFunc(true);
-						LockedPost = Posts.Last();
+						FocusPost = Posts.Last();
 					}
 					else
 					{
-						LockedPost = null;
+						FocusPost = null;
 						keyInputSwitchFunc(false);
 					}
 
@@ -309,18 +354,18 @@ internal class ImageBoardSystem : IUseMenu
 				} },
 				{ Keys.Up, () => {
 					keyInputSwitchFunc(true);
-					if (LockedPost is null) LockedPost = Posts.Last();
-					else if (LockedPost != Posts.First()) LockedPost = Posts.FindLast(LockedPost).Previous.Value;
+					if (FocusPost is null) FocusPost = Posts.Last();
+					else if (FocusPost != Posts.First()) FocusPost = Posts.FindLast(FocusPost).Previous.Value;
 					else return;
 
 					UpdateShowingPosts();
 				} },
 				{ Keys.Down, () => {
-					if (LockedPost is null) return;
-					else  if (LockedPost != Posts.Last()) LockedPost = Posts.FindLast(LockedPost).Next.Value;
+					if (FocusPost is null) return;
+					else  if (FocusPost != Posts.Last()) FocusPost = Posts.FindLast(FocusPost).Next.Value;
 					else
 					{
-						LockedPost = null;
+						FocusPost = null;
 						keyInputSwitchFunc(false);
 					}
 					UpdateShowingPosts();
