@@ -1,16 +1,20 @@
 ﻿using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Windows.Forms;
+
 using GameOverlay.Drawing;
 
 namespace GenshinImpactOverlay.ImageBoard;
 
 internal class Post
 {
+	#region Resources
 	public static string FontIndex { get; set; }
 	public static string BFontIndex { get; set; }
 	public static string WhiteBrushIndex { get; set; }
 	public static string BlackBrushIndex { get; set; }
+	#endregion Resources
 
 	#region Required
 	[JsonPropertyName("num")] public int Num { get; set; }
@@ -92,14 +96,15 @@ internal class Post
 	int? _lastLeft;
 	bool? _lastTargetPost;
 	bool? _lastExtendPost;
+	int? _lastRefsCount;
 
 	string _mathText;
 	Point _mathPoint;
 	int _mathPostHeight;
-	int _mathImgLeft;
+	int _mathImgBottom;
+	string _mathRefsText;
+	int _mathRefsRowCount;
 	#endregion premath
-
-	private static object _locked = new();
 	public int DrawPost(GraphicsWorker worker, Graphics graphics, float imgOpacity, int bottom, int left, bool targetPost = false, bool extendPost = false)
 	{
 		#region Nums
@@ -111,14 +116,74 @@ internal class Post
 		int postHeight = 0;
 		#endregion
 
-		bool mathed = _lastBottom == bottom && _lastLeft == left && _lastTargetPost == targetPost && _lastExtendPost == extendPost;
+		bool mathed = 
+			_lastBottom == bottom && _lastLeft == left && _lastTargetPost == targetPost && _lastExtendPost == extendPost;
+
+		#region refs
+		int[] refs = GetPostReferences();
+		
+		if (refs.Length > 0)
+		{
+			if (mathed) mathed = _lastRefsCount == refs.Length;
+
+			string text;
+			int refRowCount;
+
+			if (mathed)
+			{
+				text = _mathRefsText;
+				refRowCount = _mathRefsRowCount;
+			}
+			else
+			{
+				string refStr = "";
+				int length = 0;
+				refRowCount = 1;
+
+				foreach (var link in refs)
+				{
+					string add = $">>{link} ";
+
+					if ((length * symb) + (add.Length * symb) > postWidth)
+					{
+						length = 0;
+						refStr += "\n";
+						refRowCount++;
+					}
+
+					refStr += add;
+					length += add.Length;
+				}
+
+				_lastRefsCount = refs.Length;
+
+				_mathRefsText = text = refStr;
+				_mathRefsRowCount = refRowCount;
+
+				postHeight += refRowCount * row;
+			}
+
+			if (worker.Fonts[BFontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+			{
+				graphics.DrawText(
+					worker.Fonts[FontIndex], // Шрифт текста
+					(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+					new (left, bottom - postHeight), // Положение текста
+					text); // Текст
+			}
+
+			//postHeight += row;
+		}
+		#endregion refs
 
 		if (Files is not null && Files.Length == 1)
 		{
 			#region Files
 			File file = Files[0];
 
-			file.DrawFileThumb(graphics, imgOpacity, bottom, left, imgWidth, out int imgHeight);
+			if (!mathed) _mathImgBottom = bottom - postHeight;
+
+			file.DrawFileThumb(graphics, imgOpacity, _mathImgBottom, left, imgWidth, out int imgHeight);
 			#endregion Files
 
 			#region Text
@@ -144,7 +209,7 @@ internal class Post
 					postHeight += row;
 				}
 
-				_mathPoint = point = new(left + imgWidth + 10, bottom - imgHeight); // h, v
+				_mathPoint = point = new(left + imgWidth + 10, bottom - postHeight); // h, v
 				_mathText = text;
 			}
 
@@ -205,9 +270,9 @@ internal class Post
 				{
 					File file = Files[index];
 
-					int leftImg = mathed ? _mathImgLeft : bottom - postHeight;
+					if (!mathed) _mathImgBottom = bottom - postHeight;
 
-					file.DrawFileThumb(graphics, imgOpacity, leftImg, left + ((imgWidth + 5) * index), imgWidth, out int height);
+					file.DrawFileThumb(graphics, imgOpacity, _mathImgBottom, left + ((imgWidth + 5) * index), imgWidth, out int height);
 
 					if (height > maxImageHeight) maxImageHeight = height;
 				}
@@ -215,7 +280,6 @@ internal class Post
 				postHeight += maxImageHeight;
 			}
 			#endregion Files
-
 		}
 
 		if (worker.Fonts[BFontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
@@ -239,63 +303,105 @@ internal class Post
 
 		if (mathed) return _mathPostHeight;
 		else return _mathPostHeight = postHeight;
-	}
 
-	private static bool EditString(ref string text, int maxStringLength, int maxRows, out int finalRows)
-	{
-		finalRows = 0;
-
-		string[] splitted = text.Split('\n');
-		text = "";
-		for (int index = 0; index < splitted.Length; index++)
+		static bool EditString(ref string text, int maxStringLength, int maxRows, out int finalRows)
 		{
-			string line = splitted[index];
+			finalRows = 0;
 
-			var words = line.Split(new Char[] { ' ' });
-			int wordIndex = 0;
-			var spaceLetter = " ";
-			var currentLine = new StringBuilder();
-
-			while(true)
+			string[] splitted = text.Split('\n');
+			text = "";
+			for (int index = 0; index < splitted.Length; index++)
 			{
-				if (currentLine.Length + words[wordIndex].Length + 1 > maxStringLength)
+				string line = splitted[index];
+
+				var words = line.Split(new Char[] { ' ' });
+				int wordIndex = 0;
+				var spaceLetter = " ";
+				var currentLine = new StringBuilder();
+
+				while (true)
 				{
-					if (currentLine.Length > 0)
+					if (currentLine.Length + words[wordIndex].Length + 1 > maxStringLength)
 					{
-						if (maxRows == 0 || finalRows < maxRows)
+						if (currentLine.Length > 0)
 						{
-							text += $"{currentLine}\n";
-							finalRows += 1;
+							if (maxRows == 0 || finalRows < maxRows)
+							{
+								text += $"{currentLine}\n";
+								finalRows += 1;
+							}
+							else
+							{
+								return true;
+							}
 						}
-						else
-						{
-							return true;
-						}
+						currentLine.Remove(0, currentLine.Length);
 					}
-					currentLine.Remove(0, currentLine.Length);
-				}
-				currentLine.Append(words[wordIndex]);
-				currentLine.Append(spaceLetter);
-				wordIndex++;
-				if (wordIndex == words.Length)
-				{
-					if (currentLine.Length > 0)
+					currentLine.Append(words[wordIndex]);
+					currentLine.Append(spaceLetter);
+					wordIndex++;
+					if (wordIndex == words.Length)
 					{
-						if (maxRows == 0 || finalRows < maxRows)
+						if (currentLine.Length > 0)
 						{
-							text += $"{currentLine}\n";
-							finalRows += 1;
+							if (maxRows == 0 || finalRows < maxRows)
+							{
+								text += $"{currentLine}\n";
+								finalRows += 1;
+							}
+							else
+							{
+								return true;
+							}
 						}
-						else
-						{
-							return true;
-						}
-					}	
-					break;
+						break;
+					}
 				}
 			}
-		}
 
-		return false;
+			return false;
+		}
 	}
+
+	#region Links
+	private List<int>? _links;
+	/// <summary>
+	/// Возвращает номера всех постов на которые ссылается данный пост
+	/// </summary>
+	/// <returns></returns>
+	public int[] GetPostLinks()
+	{
+		if (_links is null)
+		{
+			_links = new();
+
+			RegexOptions regexOptions = RegexOptions.IgnoreCase | RegexOptions.Compiled;
+			Regex regex = new(@">>(\d+)", regexOptions);
+			MatchCollection matches = regex.Matches(CleanedComment);
+			foreach (var item in matches)
+			{
+				string? str = item.ToString();
+				if (str is null) continue;
+				_links.Add(Convert.ToInt32(str.Replace(">>", "")));
+			}
+		}
+		return _links.ToArray();
+	}
+
+	private List<int> _postRefs = new();
+	public void AddReference(int postReference)
+	{
+		if (_postRefs.Contains(postReference)) return;
+
+		_postRefs.Add(postReference);
+	}
+
+	public void RemoveReference(int postReferense) => _postRefs.Remove(postReferense);
+
+	/// <summary>
+	/// Возвращает номера всех постов которые упоминают данный пост
+	/// </summary>
+	/// <returns></returns>
+	public int[] GetPostReferences() => _postRefs.ToArray();
+	#endregion Links
 }
