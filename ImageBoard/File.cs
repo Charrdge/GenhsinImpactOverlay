@@ -1,5 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
+using GameOverlay.Drawing;
+
 namespace GenshinImpactOverlay.ImageBoard;
 
 public class File
@@ -43,8 +45,8 @@ public class File
 	[JsonPropertyName("install")] public string? Install { get; set; }
 	#endregion Optional
 
-	private GameOverlay.Drawing.Image? _pathImage;
-	private GameOverlay.Drawing.Image GetFile(GameOverlay.Drawing.Graphics graphics)
+	private Image? _pathImage;
+	private Image GetFile(Graphics graphics)
 	{
 		if (_pathImage is null)
 		{
@@ -59,8 +61,8 @@ public class File
 		return _pathImage;
 	}
 
-	private GameOverlay.Drawing.Image? _thumbImage;
-	private GameOverlay.Drawing.Image GetFileThumb(GameOverlay.Drawing.Graphics graphics)
+	private Image? _thumbImage;
+	private Image GetFileThumb(Graphics graphics)
 	{
 		if (_thumbImage is null)
 		{
@@ -78,7 +80,7 @@ public class File
 		return _thumbImage;
 	}
 
-	public void DrawFile(GameOverlay.Drawing.Graphics graphics, int bottom, int left, int width, out int height)
+	public void DrawFile(Graphics graphics, int bottom, int left, int width, out int height)
 	{
 		float coef = Height / ((float)Width);
 
@@ -87,9 +89,9 @@ public class File
 		int right = left + width;
 		int top = bottom - height;
 
-		GameOverlay.Drawing.Rectangle rectangle = new(left, top, right, bottom);
+		Rectangle rectangle = new(left, top, right, bottom);
 
-		GameOverlay.Drawing.Image image = GetFile(graphics);
+		Image image = GetFile(graphics);
 
 		graphics.DrawImage(image, rectangle, 0.5f);
 	}
@@ -100,11 +102,11 @@ public class File
 	int? _lastWidth;
 
 	int _mathHeight;
-	GameOverlay.Drawing.Rectangle _mathRectangle;
+	Rectangle _mathRectangle;
 	#endregion Premath
-	public void DrawFileThumb(GameOverlay.Drawing.Graphics graphics, float opacity, int bottom, int left, int width, out int height)
+	public void DrawFileThumb(Graphics graphics, float opacity, int bottom, int left, int width, out int height)
 	{
-		GameOverlay.Drawing.Rectangle rectangle;
+		Rectangle rectangle;
 
 		if (_lastBottom == bottom && _lastLeft == left && _lastWidth == width)
 		{
@@ -122,7 +124,7 @@ public class File
 			_mathRectangle = rectangle = new(left, top, right, bottom);
 		}
 
-		GameOverlay.Drawing.Image image = GetFileThumb(graphics);
+		Image image = GetFileThumb(graphics);
 
 		graphics.DrawImage(image, rectangle, opacity);
 	}
