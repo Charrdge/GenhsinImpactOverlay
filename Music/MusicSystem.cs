@@ -6,14 +6,14 @@ using NAudio.Wave;
 
 namespace GenshinImpactOverlay.Music;
 
-internal abstract class MusicSystem : IUseMenu
+internal abstract class MusicSystem : SystemBase, IUseMenu
 {
 	public const string SYSNAME = "Music";
 
 	#region Fonts
-	private string FontIndex { get; init; }
-	private string BlackBrushIndex { get; init; }
-	private string WhiteBrushIndex { get; init; }
+	private string? FontIndex { get; set; }
+	private string? BlackBrushIndex { get; set; }
+	private string? WhiteBrushIndex { get; set; }
 	#endregion
 
 	#region Player
@@ -39,17 +39,11 @@ internal abstract class MusicSystem : IUseMenu
 	}
 	#endregion Volume
 
-	private GraphicsWorker Worker { get; init; }
+	private GraphicsWorker Graphic { get; init; }
 
-	public MusicSystem(GraphicsWorker worker, Action<string> updateLoadStatus)
+	public MusicSystem(GraphicsWorker graphic, Action<string> updateLoadStatus) : base(graphic, updateLoadStatus)
 	{
-		updateLoadStatus("Connect to graphic");
-		Worker = worker;
-
-		updateLoadStatus("Load graphic resources");
-		FontIndex = worker.AddFont("Consolas", 14);
-		WhiteBrushIndex = worker.AddSolidBrush(new Color(255, 255, 255));
-		BlackBrushIndex = worker.AddSolidBrush(new Color(0, 0, 0));
+		Graphic = graphic;
 
 		updateLoadStatus("Autorize");
 		Autorize(GetLogin, GetPassword);
@@ -57,9 +51,6 @@ internal abstract class MusicSystem : IUseMenu
 		updateLoadStatus("Start playing queue");
 		PlayNexTrack();
 
-		InputHook.OnKeyUp += ButtonHook_OnKeyDown;
-
-		worker.OnDrawGraphics += Worker_OnDrawGraphics;
 
 		string GetLogin()
 		{
@@ -69,20 +60,20 @@ internal abstract class MusicSystem : IUseMenu
 			{
 				GraphicsWorker.DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
 				{
-					if (Worker.Fonts[FontIndex].IsInitialized && Worker.Brushes[WhiteBrushIndex].IsInitialized && Worker.Brushes[BlackBrushIndex].IsInitialized)
+					if (Graphic.Fonts[FontIndex].IsInitialized && Graphic.Brushes[WhiteBrushIndex].IsInitialized && Graphic.Brushes[BlackBrushIndex].IsInitialized)
 					{
 						e.Graphics.DrawTextWithBackground(
-							Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], Worker.Brushes[BlackBrushIndex],
+							Graphic.Fonts[FontIndex], Graphic.Brushes[WhiteBrushIndex], Graphic.Brushes[BlackBrushIndex],
 							new Point(50, 100),
 							$"Write login: {login}");
 					}
 
 				};
 
-				Worker.OnDrawGraphics += onDrawGraphic_LoginEvent;
+				Graphic.OnDrawGraphics += onDrawGraphic_LoginEvent;
 				login = InputHook.TryInputText((string loginProccess) => { login = loginProccess; return false; });
 
-				Worker.OnDrawGraphics -= onDrawGraphic_LoginEvent;
+				Graphic.OnDrawGraphics -= onDrawGraphic_LoginEvent;
 			} while (login is null || login.Length == 0);
 
 			return login;
@@ -96,41 +87,26 @@ internal abstract class MusicSystem : IUseMenu
 			{
 				GraphicsWorker.DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
 				{
-					if (Worker.Fonts[FontIndex].IsInitialized && Worker.Brushes[WhiteBrushIndex].IsInitialized && Worker.Brushes[BlackBrushIndex].IsInitialized)
+					if (Graphic.Fonts[FontIndex].IsInitialized && Graphic.Brushes[WhiteBrushIndex].IsInitialized && Graphic.Brushes[BlackBrushIndex].IsInitialized)
 					{
 						e.Graphics.DrawTextWithBackground(
-							Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], Worker.Brushes[BlackBrushIndex],
+							Graphic.Fonts[FontIndex], Graphic.Brushes[WhiteBrushIndex], Graphic.Brushes[BlackBrushIndex],
 							 new Point(50, 100),
 							 $"Write password: {password}");
 					}
 
 				};
 
-				Worker.OnDrawGraphics += onDrawGraphic_LoginEvent;
+				Graphic.OnDrawGraphics += onDrawGraphic_LoginEvent;
 
 				password = InputHook.TryInputText((string loginProccess) => { password = loginProccess; return false; });
 
-				Worker.OnDrawGraphics -= onDrawGraphic_LoginEvent;
+				Graphic.OnDrawGraphics -= onDrawGraphic_LoginEvent;
 
 			} while (password is null || password.Length == 0);
 
 			return password;
 		}
-	}
-
-	private void Worker_OnDrawGraphics(object? sender, OnDrawGraphicEventArgs e)
-	{
-		if (NowPlaying is not null)
-		{
-			Point point = new(15, 15);
-			if (Worker.Fonts[FontIndex].IsInitialized && Worker.Brushes[WhiteBrushIndex].IsInitialized)
-				e.Graphics.DrawText(Worker.Fonts[FontIndex], Worker.Brushes[WhiteBrushIndex], point, NowPlaying.TrackName);
-		}
-	}
-
-	private void ButtonHook_OnKeyDown(object? _, OnKeyUpEventArgs eventArgs)
-	{
-		if (eventArgs.InputPriority > InputPriorityEnum.Normal && eventArgs.System != SYSNAME) return;
 	}
 
 	#region Player control methods
@@ -217,6 +193,30 @@ internal abstract class MusicSystem : IUseMenu
 	/// <param name="tracks">Треки которые уже присутствуют в очереди</param>
 	/// <returns></returns>
 	protected abstract ITrackData GetNextTrack(ITrackData[] tracks);
+
+	#region SystemBase
+	protected override void Graphics_OnDrawGraphics(object? sender, OnDrawGraphicEventArgs e)
+	{
+		if (NowPlaying is not null)
+		{
+			Point point = new(15, 15);
+			if (Graphic.Fonts[FontIndex].IsInitialized && Graphic.Brushes[WhiteBrushIndex].IsInitialized)
+				e.Graphics.DrawText(Graphic.Fonts[FontIndex], Graphic.Brushes[WhiteBrushIndex], point, NowPlaying.TrackName);
+		}
+	}
+
+	protected override void InputHook_OnKeyUp(object? sender, OnKeyUpEventArgs eventArgs)
+	{
+		if (eventArgs.InputPriority > InputPriorityEnum.Normal && eventArgs.System != SYSNAME) return;
+	}
+
+	protected override void AddGraphicResources(GraphicsWorker graphics)
+	{
+		FontIndex = graphics.AddFont("Consolas", 14);
+		WhiteBrushIndex = graphics.AddSolidBrush(new Color(255, 255, 255));
+		BlackBrushIndex = graphics.AddSolidBrush(new Color(0, 0, 0));
+	}
+	#endregion
 
 	#region IUseMenu
 	private MenuItem? _menuItem;
