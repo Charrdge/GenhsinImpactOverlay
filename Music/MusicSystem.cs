@@ -1,6 +1,7 @@
 ﻿using System.Windows.Forms;
 using GameOverlay.Drawing;
 using GenshinImpactOverlay.EventsArgs;
+using GenshinImpactOverlay.GraphicWorkers;
 using GenshinImpactOverlay.Menus;
 using NAudio.Wave;
 
@@ -11,9 +12,9 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 	public const string SYSNAME = "Music";
 
 	#region Fonts
-	private string? FontIndex { get; set; }
-	private string? BlackBrushIndex { get; set; }
-	private string? WhiteBrushIndex { get; set; }
+	private FontHandler? Font { get; set; }
+	private SolidBrushHandler? BlackBrush { get; set; }
+	private SolidBrushHandler? WhiteBrush { get; set; }
 	#endregion
 
 	#region Player
@@ -60,10 +61,10 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 			{
 				GraphicsWorker.DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
 				{
-					if (Graphic.Fonts[FontIndex].IsInitialized && Graphic.Brushes[WhiteBrushIndex].IsInitialized && Graphic.Brushes[BlackBrushIndex].IsInitialized)
+					if (Font.IsInitialized && WhiteBrush.IsInitialized && BlackBrush.IsInitialized)
 					{
 						e.Graphics.DrawTextWithBackground(
-							Graphic.Fonts[FontIndex], Graphic.Brushes[WhiteBrushIndex], Graphic.Brushes[BlackBrushIndex],
+							Font, WhiteBrush, BlackBrush,
 							new Point(50, 100),
 							$"Write login: {login}");
 					}
@@ -87,10 +88,10 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 			{
 				GraphicsWorker.DrawGraphic onDrawGraphic_LoginEvent = (object? sender, OnDrawGraphicEventArgs e) =>
 				{
-					if (Graphic.Fonts[FontIndex].IsInitialized && Graphic.Brushes[WhiteBrushIndex].IsInitialized && Graphic.Brushes[BlackBrushIndex].IsInitialized)
+					if (Font.IsInitialized && WhiteBrush.IsInitialized && BlackBrush.IsInitialized)
 					{
 						e.Graphics.DrawTextWithBackground(
-							Graphic.Fonts[FontIndex], Graphic.Brushes[WhiteBrushIndex], Graphic.Brushes[BlackBrushIndex],
+							Font, WhiteBrush, BlackBrush,
 							 new Point(50, 100),
 							 $"Write password: {password}");
 					}
@@ -200,8 +201,8 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 		if (NowPlaying is not null)
 		{
 			Point point = new(15, 15);
-			if (Graphic.Fonts[FontIndex].IsInitialized && Graphic.Brushes[WhiteBrushIndex].IsInitialized)
-				e.Graphics.DrawText(Graphic.Fonts[FontIndex], Graphic.Brushes[WhiteBrushIndex], point, NowPlaying.TrackName);
+			if (Font.IsInitialized && WhiteBrush.IsInitialized)
+				e.Graphics.DrawText(Font, WhiteBrush, point, NowPlaying.TrackName);
 		}
 	}
 
@@ -212,9 +213,9 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 
 	protected override void AddGraphicResources(GraphicsWorker graphics)
 	{
-		FontIndex = graphics.AddFont("Consolas", 14);
-		WhiteBrushIndex = graphics.AddSolidBrush(new Color(255, 255, 255));
-		BlackBrushIndex = graphics.AddSolidBrush(new Color(0, 0, 0));
+		Font = graphics.AddFont("Consolas", 14);
+		WhiteBrush = graphics.AddSolidBrush(new Color(255, 255, 255));
+		BlackBrush = graphics.AddSolidBrush(new Color(0, 0, 0));
 	}
 	#endregion
 
