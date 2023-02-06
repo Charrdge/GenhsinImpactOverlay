@@ -1,5 +1,4 @@
-﻿using System.Configuration;
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
 using GenshinImpactOverlay.Menus;
 
 namespace GenshinImpactOverlay.ImageBoard;
@@ -112,7 +111,7 @@ internal abstract class ImageboardSystem : SystemBase, IUseMenu
 
 		foreach (Post post in ShowedPosts.Reverse<Post>())
 		{
-			upper += post.DrawPost(Graphics, e.Graphics, Opacity, bottom - upper, left, FocusPost == post, FocusPost == post && ExtendFocused);
+			upper += post.DrawPost(e.Graphics, Opacity, bottom - upper, left, FocusPost == post, FocusPost == post && ExtendFocused);
 
 			upper += escape; //небольшой отступ между постами
 		}

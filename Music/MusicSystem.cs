@@ -40,12 +40,8 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 	}
 	#endregion Volume
 
-	private GraphicsWorker Graphic { get; init; }
-
 	public MusicSystem(GraphicsWorker graphic, Action<string> updateLoadStatus) : base(graphic, updateLoadStatus)
 	{
-		Graphic = graphic;
-
 		updateLoadStatus("Autorize");
 		Autorize(GetLogin, GetPassword);
 
@@ -71,10 +67,10 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 
 				};
 
-				Graphic.OnDrawGraphics += onDrawGraphic_LoginEvent;
+				graphic.OnDrawGraphics += onDrawGraphic_LoginEvent;
 				login = InputHook.TryInputText((string loginProccess) => { login = loginProccess; return false; });
 
-				Graphic.OnDrawGraphics -= onDrawGraphic_LoginEvent;
+				graphic.OnDrawGraphics -= onDrawGraphic_LoginEvent;
 			} while (login is null || login.Length == 0);
 
 			return login;
@@ -98,11 +94,11 @@ internal abstract class MusicSystem : SystemBase, IUseMenu
 
 				};
 
-				Graphic.OnDrawGraphics += onDrawGraphic_LoginEvent;
+				graphic.OnDrawGraphics += onDrawGraphic_LoginEvent;
 
 				password = InputHook.TryInputText((string loginProccess) => { password = loginProccess; return false; });
 
-				Graphic.OnDrawGraphics -= onDrawGraphic_LoginEvent;
+				graphic.OnDrawGraphics -= onDrawGraphic_LoginEvent;
 
 			} while (password is null || password.Length == 0);
 

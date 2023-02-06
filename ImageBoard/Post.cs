@@ -107,7 +107,7 @@ internal class Post
 	string _mathRefsText;
 	int _mathRefsRowCount;
 	#endregion premath
-	public int DrawPost(GraphicsWorker worker, Graphics graphics, float imgOpacity, int bottom, int left, bool targetPost = false, bool extendPost = false)
+	public int DrawPost(Graphics graphics, float imgOpacity, int bottom, int left, bool targetPost = false, bool extendPost = false)
 	{
 		#region Nums
 		int row = 17;
