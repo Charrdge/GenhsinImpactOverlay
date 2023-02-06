@@ -100,20 +100,20 @@ internal class GraphicsWorker : IDisposable
 	/// <param name="wordWrapping"></param>
 	/// <returns>Имя шрифта</returns>
 	/// <exception cref="ArgumentException"></exception>
-	public string AddFont(string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
+	public FontHandler AddFont(string fontFamilyName, float size, bool bold = false, bool italic = false, bool wordWrapping = false)
 	{
-		string name = GenerateName(fontFamilyName, size, bold, italic, wordWrapping);
+		string key = GenerateKey(fontFamilyName, size, bold, italic, wordWrapping);
 		
-		if (Fonts.ContainsKey(name)) return name;
+		if (Fonts.TryGetValue(key, out FontHandler? value)) return value;
 
-		bool added = Fonts.TryAdd(name, new FontHandler(fontFamilyName, size, bold, italic, wordWrapping));
+		bool added = Fonts.TryAdd(key, new FontHandler(fontFamilyName, size, bold, italic, wordWrapping));
 		if (!added) throw new ArgumentException("Fonts not added");
 
 		if (Overlay.IsInitialized) Overlay.Recreate();
 
-		return name;
+		return Fonts[key];
 
-		static string GenerateName(string fontFamilyName, float size, bool bold, bool italic, bool wordWrapping)
+		static string GenerateKey(string fontFamilyName, float size, bool bold, bool italic, bool wordWrapping)
 		{
 			string name = $"{fontFamilyName}{size}";
 			if (bold) name += $"{bold}";
@@ -129,20 +129,20 @@ internal class GraphicsWorker : IDisposable
 	/// <param name="name"></param>
 	/// <param name="color"></param>
 	/// <exception cref="ArgumentException">Возникает в случае неудачи при попытке добавить цвет в коллекцию</exception>
-	public string AddSolidBrush(Color color)
+	public SolidBrushHandler AddSolidBrush(Color color)
 	{
-		string name = GenerateName(color);
+		string key = GenerateKey(color);
 
-		if (Brushes.ContainsKey(name)) return name;
+		if (Brushes.TryGetValue(key, out SolidBrushHandler? value)) return value;
 
-		bool added = Brushes.TryAdd(name, new SolidBrushHandler(color));
+		bool added = Brushes.TryAdd(key, new SolidBrushHandler(color));
 		if (!added) throw new ArgumentException("Solid Brush not added", nameof(color));
 
 		if (Overlay.IsInitialized) Overlay.Recreate();
 
-		return name;
+		return Brushes[key];
 
-		static string GenerateName(Color color) => $"{color.A}:{color.R}:{color.G}:{color.B}";
+		static string GenerateKey(Color color) => $"{color.A}:{color.R}:{color.G}:{color.B}";
 	}
 	#endregion
 
