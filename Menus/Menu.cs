@@ -5,6 +5,8 @@ namespace GenshinImpactOverlay.Menus;
 
 internal class Menu
 {
+	private const string SYSNAME = nameof(Menu);
+
 	/// <summary>
 	/// Обработчик графики
 	/// </summary>
@@ -70,90 +72,114 @@ internal class Menu
 	private int _curNodeIndex;
 	private void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs)
 	{
-		Keys key = eventArgs.Key;
-
-		switch (key)
+		try
 		{
-			case Keys.Home:
-				IsLocked = false;
-				IsOpen = !IsOpen;
-				_curNodeIndex = 0;
-				break;
-			case Keys.Up when IsOpen && !IsLocked:
-				if (OpenNode is null)
-				{
-					MenuItem curNode = Menus[_curNodeIndex];
-					List<MenuItem>? childs = curNode.ChildMenus;
-					if (childs is not null && childs.Count > 0) OpenNode = (null, Menus[_curNodeIndex]);
-					else goto default;
-				}
-				else
-				{
-					MenuItem curNode = OpenNode.Value.node.ChildMenus[_curNodeIndex];
-					if (curNode.ChildMenus is not null && curNode.ChildMenus.Count > 0) OpenNode = (OpenNode.Value.node, curNode);
-					else goto default;
-				}
-				break;
-			case Keys.Right or Keys.Left when IsOpen && !IsLocked:
-				List<MenuItem>? items = OpenNode is null ? Menus : OpenNode.Value.node.ChildMenus;
-				if (items is not null && items.Count > 0)
-				{
-					if (key == Keys.Right)
+            if (eventArgs.InputPriority >= InputPriorityEnum.Locked && eventArgs.System != SYSNAME) return;
+
+            Keys key = eventArgs.Key;
+
+			switch (key)
+			{
+				case Keys.Home:
+					IsLocked = false;
+					IsOpen = !IsOpen;
+					_curNodeIndex = 0;
+					break;
+				case Keys.Up when IsOpen && !IsLocked:
+					if (OpenNode is null)
 					{
-						if (items.Count == _curNodeIndex + 1) _curNodeIndex = 0;
-						else _curNodeIndex++;
+						MenuItem curNode = Menus[_curNodeIndex];
+						List<MenuItem>? childs = curNode.ChildMenus;
+						if (childs is not null && childs.Count > 0) OpenNode = (null, Menus[_curNodeIndex]);
+						else goto default;
 					}
 					else
 					{
-						if (_curNodeIndex == 0) _curNodeIndex = items.Count - 1;
-						else _curNodeIndex--;
+						MenuItem curNode = OpenNode.Value.node.ChildMenus[_curNodeIndex];
+						if (curNode.ChildMenus is not null && curNode.ChildMenus.Count > 0) OpenNode = (OpenNode.Value.node, curNode);
+						else goto default;
+					}
+					break;
+				case Keys.Right or Keys.Left when IsOpen && !IsLocked:
+					List<MenuItem>? items = OpenNode is null ? Menus : OpenNode.Value.node.ChildMenus;
+					if (items is not null && items.Count > 0)
+					{
+						if (key == Keys.Right)
+						{
+							if (items.Count == _curNodeIndex + 1) _curNodeIndex = 0;
+							else _curNodeIndex++;
+						}
+						else
+						{
+							if (_curNodeIndex == 0) _curNodeIndex = items.Count - 1;
+							else _curNodeIndex--;
+						}
+					}
+					else goto default;
+					break;
+				case Keys.Down when IsOpen && !IsLocked:
+					if (OpenNode is null) goto case Keys.Home;
+					else if (OpenNode.Value.parent is null) OpenNode = null;
+					else OpenNode = (null, OpenNode.Value.parent);
+					break;
+				default:
+					if (!IsOpen) return;
+					items = (OpenNode is null ? Menus : OpenNode.Value.node.ChildMenus) ?? throw new NullReferenceException();
+					Console.WriteLine($"{items.Count} {_curNodeIndex}");
+					if (items.Count <= _curNodeIndex) _curNodeIndex = 0;
+
+					Dictionary<Keys, Action>? hotkeys = items[_curNodeIndex].Hotkeys;
+
+					if (hotkeys is not null && hotkeys.TryGetValue(key, out Action? action))
+					{
+						Task task = new(action);
+						task.Start();
+					}
+					break;
+			}
+
+			if (IsOpen)
+			{
+				InputHook.TrySetSystemLock(SYSNAME);
+				if (OpenNode is null)
+				{
+					Menus = new();
+					foreach (var item in UseMenuSystems)
+					{
+						var menu = item.GetMenu(UpdateMenu, KeyInputSwitchFunc);
+						if (menu is not null) Menus.Add(menu);
 					}
 				}
-				else goto default;
-				break;
-			case Keys.Down when IsOpen && !IsLocked:
-				if (OpenNode is null) goto case Keys.Home;
-				else if (OpenNode.Value.parent is null) OpenNode = null;
-				else OpenNode = (null, OpenNode.Value.parent);
-				break;
-			default:
-				if (!IsOpen) return;
-				items = (OpenNode is null ? Menus : OpenNode.Value.node.ChildMenus) ?? throw new NullReferenceException();
-				Console.WriteLine($"{items.Count} {_curNodeIndex}");
-				if (items.Count <= _curNodeIndex) _curNodeIndex = 0;
-
-				Dictionary<Keys, Action>? hotkeys = items[_curNodeIndex].Hotkeys;
-
-				if (hotkeys is not null && hotkeys.TryGetValue(key, out Action? action)) action?.Invoke();
-				break;
-		}
-
-		if (IsOpen)
-		{
-			if (OpenNode is null)
-			{
-				Menus = new();
-				foreach (var item in UseMenuSystems)
-				{
-					var menu = item.GetMenu(UpdateMenu, KeyInputSwitchFunc);
-					if (menu is not null) Menus.Add(menu);
-				}
+				else Menus = OpenNode.Value.node.ChildMenus;
 			}
-			else Menus = OpenNode.Value.node.ChildMenus;
-		}
-		else Menus.Clear();
+			else
+			{
+				Menus.Clear();
+				InputHook.TryClearSystemLock(SYSNAME);
+			}
+			
+			void UpdateMenu(MenuItem? menu)
+			{
+				int index = Menus.FindIndex((item) => item.Name == menu.Name);
 
-		void UpdateMenu(MenuItem? menu)
+				if (index > -1) Menus[index] = menu;
+			}
+
+			void KeyInputSwitchFunc(bool? state = null) => IsLocked = state is null ? !IsLocked : state.Value;
+		}
+		catch(Exception e)
 		{
-			int index = Menus.FindIndex((item) => item.Name == menu.Name);
-
-			if (index > -1) Menus[index] = menu;
+			IsOpen = false;
+			IsLocked = false;
+			OpenNode = null;
+			Menus?.Clear();
+#if DEBUG
+			Console.WriteLine(e.Message);
+#endif
 		}
-
-		void KeyInputSwitchFunc(bool? state = null) => IsLocked = state is null ? !IsLocked : state.Value;
 	}
 
-	private void Worker_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e)
+	private void Worker_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs eventArgs)
 	{
 		if (Menus is null || Menus.Count == 0) return;
 
@@ -163,22 +189,31 @@ internal class Menu
 		int height = 25;
 		int pad = 10;
 
-		var gfx = e.Graphics;
+		var gfx = eventArgs.Graphics;
 
-		Rectangle rect = new(left, bottom - height, left + width, bottom);
-		if (OpenNode is not null) OpenNode.Value.node.DrawIcon(gfx, rect);
-
-		for (int index = 0; index < Menus.Count; index++)
+		try
 		{
-			MenuItem menu = Menus[index];
-			int hPad = index * (width + pad);
-			int vPad = height + pad;
-			rect = new(left + hPad, 768 - bottom - vPad - height, left + width + hPad, 768 - bottom - vPad);
+			Rectangle rect = new(left, bottom - height, left + width, bottom);
+			if (OpenNode is not null) OpenNode.Value.node.DrawIcon(gfx, rect);
 
-			menu.DrawIcon(gfx, rect);
+			for (int index = 0; index < Menus.Count; index++)
+			{
+				MenuItem menu = Menus[index];
+				int hPad = index * (width + pad);
+				int vPad = height + pad;
+				rect = new(left + hPad, 768 - bottom - vPad - height, left + width + hPad, 768 - bottom - vPad);
 
-			if (index == _curNodeIndex && Worker.Brushes[WhiteBrushIndex].IsInitialized) gfx.DrawCircle(
-				Worker.Brushes[WhiteBrushIndex], left + hPad + (width / 2), 768 - bottom - vPad - (height / 2), width / 2, 1f);
+				menu.DrawIcon(gfx, rect);
+
+				if (index == _curNodeIndex && Worker.Brushes[WhiteBrushIndex].IsInitialized) gfx.DrawCircle(
+					Worker.Brushes[WhiteBrushIndex], left + hPad + (width / 2), 768 - bottom - vPad - (height / 2), width / 2, 1f);
+			}
+		}
+		catch(Exception e)
+		{
+#if DEBUG
+			Console.WriteLine(e.Message);
+#endif
 		}
 	}
 }
