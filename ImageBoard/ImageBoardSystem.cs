@@ -1,9 +1,10 @@
-﻿using System.Windows.Forms;
+﻿using System.Configuration;
+using System.Windows.Forms;
 using GenshinImpactOverlay.Menus;
 
 namespace GenshinImpactOverlay.ImageBoard;
 
-internal abstract class ImageboardSystem : IUseMenu
+internal abstract class ImageboardSystem : SystemBase, IUseMenu
 {
 	private MenuItem? _menuItem;
 	/// <summary>
@@ -45,21 +46,8 @@ internal abstract class ImageboardSystem : IUseMenu
 	/// </summary>
 	private List<Post> ShowedPosts { get; set; } = new();
 
-	/// <summary>
-	/// Обработчик графики
-	/// </summary>
-	private GraphicsWorker Worker { get; init; }
-
-	public ImageboardSystem(GraphicsWorker worker, Action<string> updateLoadStatus)
+	public ImageboardSystem(GraphicsWorker graphics, Action<string> updateLoadStatus) : base(graphics, updateLoadStatus)
 	{
-		Worker = worker;
-
-		Post.FontIndex = worker.AddFont("Consolas", 14);
-		Post.BFontIndex = worker.AddFont("Consolas", 14, bold: true);
-
-		Post.WhiteBrushIndex = worker.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
-		Post.BlackBrushIndex = worker.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
-
 		int threadNum = GetThreadNumByTag();
 
 		foreach (var post in GetAllPosts(threadNum))
@@ -98,17 +86,22 @@ internal abstract class ImageboardSystem : IUseMenu
 
 		GetNewPostsTimer.AutoReset = true;
 		GetNewPostsTimer.Enabled = true;
-
-		Worker.OnDrawGraphics += Graphics_OnDrawGraphics;
-
-		InputHook.OnKeyUp += InputHook_OnKeyUp;
 	}
 
 	protected abstract int GetThreadNumByTag(string tag = "genshin");
 	protected abstract Post[] GetAllPosts(int threadNum);
 	protected abstract bool TryGetNewPosts(int threadNum, Post[] prevPosts, out Post[] newPosts);
 
-	private void Graphics_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e)
+	protected override void AddGraphicResources(GraphicsWorker graphics)
+	{
+		Post.FontIndex = graphics.AddFont("Consolas", 14);
+		Post.BFontIndex = graphics.AddFont("Consolas", 14, bold: true);
+
+		Post.WhiteBrushIndex = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
+		Post.BlackBrushIndex = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
+	}
+
+	protected override void Graphics_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e)
 	{
 		int escape = 15;
 		int bottom = 720;
@@ -119,13 +112,13 @@ internal abstract class ImageboardSystem : IUseMenu
 
 		foreach (Post post in ShowedPosts.Reverse<Post>())
 		{
-			upper += post.DrawPost(Worker, e.Graphics, Opacity, bottom - upper, left, FocusPost == post, FocusPost == post && ExtendFocused);
+			upper += post.DrawPost(Graphics, e.Graphics, Opacity, bottom - upper, left, FocusPost == post, FocusPost == post && ExtendFocused);
 
 			upper += escape; //небольшой отступ между постами
 		}
 	}
 
-	private void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs)
+	protected override void InputHook_OnKeyUp(object? sender, EventsArgs.OnKeyUpEventArgs eventArgs)
 	{
 
 	}

@@ -122,17 +122,14 @@ internal static class InputHook
 		}
 		else if ((Keys)lCode.vkCode == Keys.End)
 		{
-			Process.GetCurrentProcess().Kill();
-		}
-		else if ((Keys)lCode.vkCode == Keys.Home)
-		{
-
+			//Process.GetCurrentProcess().Kill();
 		}
 
 		if (nCode == 0 && lCode.flags == KBDLLHOOKSTRUCTFlags.LLKHF_UP)
 		{
-			//Console.WriteLine($"{(Keys)lCode.vkCode} | {InputPriority} | {SystemInputName}");
-
+#if DEBUG
+			Console.WriteLine($"{(Keys)lCode.vkCode} | {InputPriority} | {SystemInputName}");
+#endif
 			OnKeyUp?.Invoke(null, new ((Keys)lCode.vkCode, InputPriority, SystemInputName));
 		}
 		

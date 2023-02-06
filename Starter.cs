@@ -25,7 +25,7 @@ internal class Starter
 
 	Task? InitSystemTask { get; set; }
 
-	public Starter(GraphicsWorker graphicsWorker, Menu menu)
+	public Starter(GraphicsWorker graphicsWorker, Menu menu, params Action<GraphicsWorker, Action<string>>[] systems)
 	{
 		GraphicsWorker = graphicsWorker;
 		Menu = menu;
@@ -49,13 +49,13 @@ internal class Starter
 
 		if (InitSystemTask is null)
 		{
-			if (key == Keys.NumPad5)
+			if (key is Keys.Clear or Keys.NumPad5)
 			{
 				if (MusicSystem is null)
 				{
 					InitSystemTask = new Task(() =>
 					{
-						Music.MusicSystem system = new(GraphicsWorker);
+						Music.YandexMusicSystem system = new(GraphicsWorker, (str) => { });
 
 						MusicSystem = true;
 						InitSystemTask = null;
@@ -80,7 +80,7 @@ internal class Starter
 				{
 					InitSystemTask = new Task(() =>
 					{
-						ImageBoard.ImageBoardSystem system = new(GraphicsWorker);
+						ImageBoard.DvachSystem system = new(GraphicsWorker, (str) => { });
 
 						ImageBoardSystem = true;
 						InitSystemTask = null;
@@ -90,7 +90,7 @@ internal class Starter
 					InitSystemTask.Start();
 				}
 			}
-			else if (key == Keys.NumPad6)
+			else if (key is Keys.Right or Keys.NumPad6)
 			{
 				if (MusicSystem is null) MusicSystem = false;
 				else if (CooldownSystem is null) CooldownSystem = false;
@@ -138,8 +138,7 @@ internal class Starter
 				GraphicsWorker.Brushes[WhiteBrushIndex],
 				GraphicsWorker.Brushes[BlackBrushIndex],
 				 new Point(50, 50),
-				 text);
+			text);
 		}
-
 	}
 }
