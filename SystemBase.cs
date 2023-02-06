@@ -8,17 +8,13 @@ internal abstract class SystemBase
 	/// <summary>
 	/// Обработчик графики
 	/// </summary>
-	protected GraphicsWorker Graphics { get; init; }
-
 	public SystemBase(GraphicsWorker graphics, Action<string> updateLoadStatus)
 	{
 		updateLoadStatus("Load graphic resources");
 
-		Graphics = graphics;
-
 		AddGraphicResources(graphics);
 
-		Graphics.OnDrawGraphics += Graphics_OnDrawGraphics;
+		graphics.OnDrawGraphics += Graphics_OnDrawGraphics;
 
 		InputHook.OnKeyUp += InputHook_OnKeyUp;
 	}

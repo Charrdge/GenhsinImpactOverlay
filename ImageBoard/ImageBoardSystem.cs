@@ -1,5 +1,4 @@
-﻿using System.Configuration;
-using System.Windows.Forms;
+﻿using System.Windows.Forms;
 using GenshinImpactOverlay.Menus;
 
 namespace GenshinImpactOverlay.ImageBoard;
@@ -94,11 +93,11 @@ internal abstract class ImageboardSystem : SystemBase, IUseMenu
 
 	protected override void AddGraphicResources(GraphicsWorker graphics)
 	{
-		Post.FontIndex = graphics.AddFont("Consolas", 14);
-		Post.BFontIndex = graphics.AddFont("Consolas", 14, bold: true);
+		Post.Font = graphics.AddFont("Consolas", 14);
+		Post.BFont = graphics.AddFont("Consolas", 14, bold: true);
 
-		Post.WhiteBrushIndex = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
-		Post.BlackBrushIndex = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
+		Post.WhiteBrush = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
+		Post.BlackBrush = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
 	}
 
 	protected override void Graphics_OnDrawGraphics(object? sender, EventsArgs.OnDrawGraphicEventArgs e)
@@ -112,7 +111,7 @@ internal abstract class ImageboardSystem : SystemBase, IUseMenu
 
 		foreach (Post post in ShowedPosts.Reverse<Post>())
 		{
-			upper += post.DrawPost(Graphics, e.Graphics, Opacity, bottom - upper, left, FocusPost == post, FocusPost == post && ExtendFocused);
+			upper += post.DrawPost(e.Graphics, Opacity, bottom - upper, left, FocusPost == post, FocusPost == post && ExtendFocused);
 
 			upper += escape; //небольшой отступ между постами
 		}

@@ -5,15 +5,17 @@ using System.Windows.Forms;
 
 using GameOverlay.Drawing;
 
+using GenshinImpactOverlay.GraphicWorkers;
+
 namespace GenshinImpactOverlay.ImageBoard;
 
 internal class Post
 {
 	#region Resources
-	public static string FontIndex { get; set; }
-	public static string BFontIndex { get; set; }
-	public static string WhiteBrushIndex { get; set; }
-	public static string BlackBrushIndex { get; set; }
+	public static FontHandler Font { get; set; }
+	public static FontHandler BFont { get; set; }
+	public static SolidBrushHandler WhiteBrush { get; set; }
+	public static SolidBrushHandler BlackBrush { get; set; }
 	#endregion Resources
 
 	#region Required
@@ -105,7 +107,7 @@ internal class Post
 	string _mathRefsText;
 	int _mathRefsRowCount;
 	#endregion premath
-	public int DrawPost(GraphicsWorker worker, Graphics graphics, float imgOpacity, int bottom, int left, bool targetPost = false, bool extendPost = false)
+	public int DrawPost(Graphics graphics, float imgOpacity, int bottom, int left, bool targetPost = false, bool extendPost = false)
 	{
 		#region Nums
 		int row = 17;
@@ -163,11 +165,11 @@ internal class Post
 				postHeight += refRowCount * row;
 			}
 
-			if (worker.Fonts[BFontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+			if (BFont.IsInitialized && WhiteBrush.IsInitialized)
 			{
 				graphics.DrawText(
-					worker.Fonts[FontIndex], // Шрифт текста
-					(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+					Font, // Шрифт текста
+					WhiteBrush, // Цвет текста
 					new (left, bottom - postHeight), // Положение текста
 					text); // Текст
 			}
@@ -213,11 +215,11 @@ internal class Post
 				_mathText = text;
 			}
 
-			if (worker.Fonts[FontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+			if (Font.IsInitialized && WhiteBrush.IsInitialized)
 			{
 				graphics.DrawText(
-					worker.Fonts[FontIndex], // Шрифт текста
-					(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+					Font, // Шрифт текста
+					WhiteBrush, // Цвет текста
 					point, // Положение текста
 					text); // Текст
 			}
@@ -249,11 +251,11 @@ internal class Post
 				point = new(left, bottom - postHeight); // h, v
 			}
 
-			if (worker.Fonts[FontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+			if (Font.IsInitialized && WhiteBrush.IsInitialized)
 			{
 				graphics.DrawText(
-					worker.Fonts[FontIndex], // Шрифт текста
-					(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+					Font, // Шрифт текста
+					WhiteBrush, // Цвет текста
 					point, // Положение текста
 					text); // Текст
 			}
@@ -282,22 +284,22 @@ internal class Post
 			#endregion Files
 		}
 
-		if (worker.Fonts[BFontIndex].IsInitialized && worker.Brushes[WhiteBrushIndex].IsInitialized)
+		if (BFont.IsInitialized && WhiteBrush.IsInitialized)
 		{
 			int y = bottom - (mathed ? _mathPostHeight : postHeight) - row;
 			graphics.DrawText(
-				worker.Fonts[BFontIndex], // Шрифт текста
-				(SolidBrush)worker.Brushes[WhiteBrushIndex], // Цвет текста
+				BFont, // Шрифт текста
+				WhiteBrush, // Цвет текста
 				new(left, y), // Положение текста
 				$"№{Num}"); // Текст
 		}
 		postHeight += row;
 
-		if (worker.Brushes[targetPost ? BlackBrushIndex : WhiteBrushIndex].IsInitialized)
+		if ((targetPost ? BlackBrush : WhiteBrush).IsInitialized)
 		{
 			int endY = bottom - (mathed ? _mathPostHeight : postHeight);
 			graphics.DrawLine(
-				(SolidBrush)worker.Brushes[targetPost ? BlackBrushIndex : WhiteBrushIndex],
+				targetPost ? BlackBrush : WhiteBrush,
 				new Line(left - 5, bottom, left - 5, endY), 2f);
 		}
 

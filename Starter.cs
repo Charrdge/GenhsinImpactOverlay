@@ -1,6 +1,7 @@
 ﻿using System.Windows.Forms;
 using GameOverlay.Drawing;
 using GenshinImpactOverlay.EventsArgs;
+using GenshinImpactOverlay.GraphicWorkers;
 using GenshinImpactOverlay.Menus;
 
 namespace GenshinImpactOverlay;
@@ -14,9 +15,9 @@ internal class Starter
 	Menu Menu { get; }
 
 	#region Resources
-	private string FontIndex { get; init; }
-	private string WhiteBrushIndex { get; init; }
-	private string BlackBrushIndex { get; init; }
+	private FontHandler Font { get; init; }
+	private SolidBrushHandler WhiteBrush { get; init; }
+	private SolidBrushHandler BlackBrush { get; init; }
 	#endregion Resources
 
 	bool? MusicSystem { get; set; }
@@ -30,9 +31,9 @@ internal class Starter
 		GraphicsWorker = graphicsWorker;
 		Menu = menu;
 
-		FontIndex = graphicsWorker.AddFont("Consolas", 14);
-		WhiteBrushIndex = graphicsWorker.AddSolidBrush(new Color(255, 255, 255));
-		BlackBrushIndex = graphicsWorker.AddSolidBrush(new Color(0, 0, 0));
+		Font = graphicsWorker.AddFont("Consolas", 14);
+		WhiteBrush = graphicsWorker.AddSolidBrush(new Color(255, 255, 255));
+		BlackBrush = graphicsWorker.AddSolidBrush(new Color(0, 0, 0));
 
 		GraphicsWorker.OnDrawGraphics += GraphicsWorker_OnDrawGraphics;
 
@@ -129,14 +130,14 @@ internal class Starter
 		}
 		else GraphicsWorker.OnDrawGraphics -= GraphicsWorker_OnDrawGraphics;
 		
-		if (GraphicsWorker.Fonts[FontIndex].IsInitialized &&
-			GraphicsWorker.Brushes[WhiteBrushIndex].IsInitialized &&
-			GraphicsWorker.Brushes[BlackBrushIndex].IsInitialized)
+		if (Font.IsInitialized &&
+			WhiteBrush.IsInitialized &&
+			BlackBrush.IsInitialized)
 		{
 			graphics.DrawTextWithBackground(
-				GraphicsWorker.Fonts[FontIndex],
-				GraphicsWorker.Brushes[WhiteBrushIndex],
-				GraphicsWorker.Brushes[BlackBrushIndex],
+				Font,
+				WhiteBrush,
+				BlackBrush,
 				 new Point(50, 50),
 			text);
 		}

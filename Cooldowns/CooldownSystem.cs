@@ -1,5 +1,7 @@
 ﻿using System.Windows.Forms;
 
+using GenshinImpactOverlay.GraphicWorkers;
+
 namespace GenshinImpactOverlay.Cooldowns;
 
 /// <summary>
@@ -42,10 +44,10 @@ internal class CooldownSystem : IDisposable
 		SwitchCharacterKeys = switchChararcterKeys;
 		foreach (Keys key in switchChararcterKeys) LastClickTimes.Add(key, DateTime.Now);
 
-		string font = graphics.AddFont("Consolas", 14);
+		FontHandler font = graphics.AddFont("Consolas", 14);
 
-		string white = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
-		string black = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
+		SolidBrushHandler white = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(255, 255, 255));
+		SolidBrushHandler black = graphics.AddSolidBrush(new GameOverlay.Drawing.Color(0, 0, 0));
 
 		InputHook.OnKeyUp += (_, eventArgs) =>
 		{
@@ -74,12 +76,12 @@ internal class CooldownSystem : IDisposable
 			{
 				var key = SwitchCharacterKeys[i];
 
-				if (graphics.Brushes[white].IsInitialized && graphics.Brushes[black].IsInitialized)
+				if (white.IsInitialized && black.IsInitialized)
 				{ 
 					e.Graphics.DrawTextWithBackground(
-						graphics.Fonts[font], // Шрифт текста
-						(GameOverlay.Drawing.SolidBrush)graphics.Brushes[white], // Цвет текста
-						(GameOverlay.Drawing.SolidBrush)graphics.Brushes[black], // Фон текста
+						font, // Шрифт текста
+						white, // Цвет текста
+						black, // Фон текста
 						h, v + (p * i), // Положение текста
 						timerText(key)); // Текст
 				}

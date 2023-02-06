@@ -1,6 +1,8 @@
 ﻿using System.Windows.Forms;
 using GameOverlay.Drawing;
 
+using GenshinImpactOverlay.GraphicWorkers;
+
 namespace GenshinImpactOverlay.Menus;
 
 internal class Menu
@@ -38,9 +40,9 @@ internal class Menu
 	private List<IUseMenu> UseMenuSystems { get; init; }
 
 	#region Resources
-	private string FontIndex { get; init; }
-	private string WhiteBrushIndex { get; init; }
-	private string BlackBrushIndex { get; init; }
+	private FontHandler FontIndex { get; init; }
+	private SolidBrushHandler WhiteBrushIndex { get; init; }
+	private SolidBrushHandler BlackBrushIndex { get; init; }
 	#endregion Resources
 
 	public Menu(GraphicsWorker worker, params IUseMenu[] useMenuSystems)
@@ -205,8 +207,8 @@ internal class Menu
 
 				menu.DrawIcon(gfx, rect);
 
-				if (index == _curNodeIndex && Worker.Brushes[WhiteBrushIndex].IsInitialized) gfx.DrawCircle(
-					Worker.Brushes[WhiteBrushIndex], left + hPad + (width / 2), 768 - bottom - vPad - (height / 2), width / 2, 1f);
+				if (index == _curNodeIndex && WhiteBrushIndex.IsInitialized) gfx.DrawCircle(
+					WhiteBrushIndex, left + hPad + (width / 2), 768 - bottom - vPad - (height / 2), width / 2, 1f);
 			}
 		}
 		catch(Exception e)
